@@ -1,0 +1,35 @@
+{
+  "name": "SIMPLE",
+  "version": "0.0.0",
+  "description": "Simple backend framework",
+  "main": "./bin/SIMPLE.js",
+  "bin": {
+    "SIMPLE": "./bin/SIMPLE.js"
+  },
+  "scripts": {
+    "test": "./bin/test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Luphia/SIMPLE.git"
+  },
+  "keywords": [
+    "backend"
+  ],
+  "author": "Luphia Chang",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Luphia/SIMPLE/issues"
+  },
+  "homepage": "https://github.com/Luphia/SIMPLE",
+  "dependencies": {
+    "socket.io": "^1.3.2",
+    "socket.io-client": "^1.3.2",
+    "ecdb": "0.0.0",
+    "phantomjs": "^1.9.15",
+    "express": "^4.11.2",
+    "express-session": "^1.10.2",
+    "body-parser": "^1.11.0",
+    "serve-favicon": "^2.2.0"
+  }
+}
