@@ -15,6 +15,7 @@ util.inherits(Receptor, SocketBot);
 
 Receptor.prototype.init = function(config) {
 	Receptor.super_.prototype.init.call(this, config);
+	var self = this;
 
 	this.router = express.Router();
 	this.app = express();
@@ -31,6 +32,8 @@ Receptor.prototype.init = function(config) {
 	this.app.use(bodyParser.json());
 	this.app.use(express.static(path.join(__dirname, '../public')));
 	this.app.use(this.router);
+
+	this.router.all('*', function(req, res, next) { self.route(req, res, next); });
 };
 
 Receptor.prototype.start = function() {
@@ -44,6 +47,21 @@ Receptor.prototype.start = function() {
 Receptor.prototype.stop = function() {
 	Receptor.super_.prototype.stop.apply(this);
 	this.http.close();
+};
+
+Receptor.prototype.route = function(req, res, next) {
+	var msg = {
+		"url": req.originalUrl,
+		"params": req.params,
+		"query": req.query,
+		"body": req.body,
+		"sessionID": req.sessionID,
+		"session": req.session
+	};
+
+	var tag = msg.url.substr(1).split('/').join('.');
+console.log(tag);
+	res.send( this.random(msg, 1, [tag], 10000) );
 };
 
 module.exports = Receptor;

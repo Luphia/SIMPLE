@@ -12,7 +12,7 @@ util.inherits(RecorderBot, SocketBot);
 RecorderBot.prototype.init = function(config) {
 	RecorderBot.super_.prototype.init.call(this, config);
 	this.DB = new ECDB();
-	this.dburl = config.dburl || 'mongodb://10.10.23.31:27010';
+	this.dburl = config.dburl || 'mongodb://10.10.23.31:27010/easyDB';
 	this.tags = ["recorder"];
 };
 
@@ -28,6 +28,7 @@ RecorderBot.prototype.stop = function() {
 
 RecorderBot.prototype.get = function(msg) {
 	var rs;
+
 	if(msg) {
 		if(typeof msg != 'object') {
 			msg = {"data": msg};

@@ -67,11 +67,12 @@ Coordinator.prototype.stop = function() {
 };
 
 Coordinator.prototype.messageID = function(message) {
-	if(typeof message == 'object') {
-		message = JSON.stringify(message);
-	}
 	if(message._id) {
 		return message._id;
+	}
+
+	if(typeof message == 'object') {
+		message = JSON.stringify(message);
 	}
 
 	return crypto.createHash('sha1').update(message).digest('hex');
@@ -115,10 +116,21 @@ Coordinator.prototype.message = function(client, message) {
 	}
 
 	message._id = this.messageID(message);
-	this.io.to(client).emit('message', message);	//--
 	message._from = client;
 
 	var targets = this.getTargets(message._option);
+
+	if(message._option.waiting) {
+		this.io.to(client).emit('wait', {
+			"_id": message._id,
+			"jobs": targets.length
+		});
+
+		console.log({
+			"_id": message._id,
+			"jobs": targets.length
+		});//--
+	}
 	delete message._option;
 
 	this.send(targets, message);

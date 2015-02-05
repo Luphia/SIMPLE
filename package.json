@@ -30,6 +30,8 @@
     "express": "^4.11.2",
     "express-session": "^1.10.2",
     "body-parser": "^1.11.0",
-    "serve-favicon": "^2.2.0"
+    "serve-favicon": "^2.2.0",
+    "mysql": "^2.5.4",
+    "deasync": "0.0.8"
   }
 }
