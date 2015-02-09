@@ -134,7 +134,7 @@ SocketBot.prototype.random = function(msg, num, tags, response) {
 
 SocketBot.prototype.get = function(message) {
 	if(message._command) {
-		this.command(message);
+		this.exec(message);
 	}
 	else {
 		console.log('I got message: %s', JSON.stringify(message));
@@ -152,6 +152,15 @@ SocketBot.prototype.response = function(msg, oldMsg) {
 	msg._id = oldMsg._id;
 	msg._response = oldMsg._id;
 	this.peer(msg, oldMsg._from);
+};
+
+SocketBot.prototype.record = function(table, data) {
+	var message = {
+		"table": table,
+		"data": data
+	};
+
+	this.random(message, 1, 'recorder');
 };
 
 module.exports = SocketBot;
