@@ -41,7 +41,10 @@ Coordinator.prototype.init = function(config) {
 Coordinator.prototype.start = function() {
 	Coordinator.super_.prototype.start.apply(this);
 	var self = this;
-	this.io = require('socket.io')(2266);
+	this.io = require('socket.io')(2266, {
+		"pingInterval": 600000,
+		"pingTimeout": 600000
+	});
 
 	this.io.on('connection', function(socket) {
 		var client = socket.client.id;
