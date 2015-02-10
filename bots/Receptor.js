@@ -60,7 +60,6 @@ Receptor.prototype.route = function(req, res, next) {
 	};
 
 	var tag = msg.url.substr(1).split('/').join('.');
-console.log(tag);
 	res.send( this.random(msg, 1, [tag], 10000) );
 };
 
