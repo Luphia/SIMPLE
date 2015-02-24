@@ -28,6 +28,7 @@ Receptor.prototype.init = function(config) {
 
 	this.app.set('port', 80);
 	this.app.use(this.session);
+	this.app.use(this.filter);
 	this.app.use(bodyParser.urlencoded({ extended: false }));
 	this.app.use(bodyParser.json());
 	this.app.use(express.static(path.join(__dirname, '../public')));
@@ -47,6 +48,11 @@ Receptor.prototype.start = function() {
 Receptor.prototype.stop = function() {
 	Receptor.super_.prototype.stop.apply(this);
 	this.http.close();
+};
+
+Receptor.prototype.filter = function(req, res, next) {
+	res.header("Access-Control-Allow-Origin", "*");
+	next();
 };
 
 Receptor.prototype.route = function(req, res, next) {

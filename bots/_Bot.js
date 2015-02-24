@@ -1,16 +1,3 @@
-var clone = function(target) {
-	if(typeof(target) == 'object') {
-		var rs = Array.isArray(target)? []: {};
-		for(var key in target) {
-			rs[key] = clone(target[key]);
-		}
-		return rs;
-	}
-	else {
-		return target;
-	}
-};
-
 var Bot = function(config) {
 	this.init(config);
 };
@@ -47,6 +34,19 @@ Bot.prototype.randomID = function() {
 		rs += string[ Math.floor(Math.random() * string.length) ];
 	}
 	return rs;
+};
+
+Bot.prototype.clone = function(target) {
+	if(typeof(target) == 'object') {
+		var rs = Array.isArray(target)? []: {};
+		for(var key in target) {
+			rs[key] = this.clone(target[key]);
+		}
+		return rs;
+	}
+	else {
+		return target;
+	}
 };
 
 Bot.prototype.translate = function(command) {
@@ -87,7 +87,7 @@ Bot.prototype.wait = function(event) {
 
 	var rs;
 	if(now < timeout) {
-		rs = clone(this.result[event]);
+		rs = this.clone(this.result[event]);
 	}
 	else {
 		rs = false;
