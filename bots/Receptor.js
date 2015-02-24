@@ -58,6 +58,7 @@ Receptor.prototype.filter = function(req, res, next) {
 Receptor.prototype.route = function(req, res, next) {
 	var msg = {
 		"url": req.originalUrl,
+		"method": req.method,
 		"params": req.params,
 		"query": req.query,
 		"body": req.body,
