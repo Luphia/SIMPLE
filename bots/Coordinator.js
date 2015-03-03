@@ -114,7 +114,7 @@ Coordinator.prototype.untag = function(client) {
 };
 
 Coordinator.prototype.message = function(client, message) {
-	if(typeof message != 'object') {
+	if(typeof message != 'object' || Array.isArray(message)) {
 		message = {"data": message};
 	}
 
@@ -128,11 +128,6 @@ Coordinator.prototype.message = function(client, message) {
 			"_id": message._id,
 			"jobs": targets.length
 		});
-
-		console.log({
-			"_id": message._id,
-			"jobs": targets.length
-		});//--
 	}
 	delete message._option;
 

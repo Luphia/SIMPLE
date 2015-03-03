@@ -57,7 +57,7 @@ Receptor.prototype.filter = function(req, res, next) {
 
 Receptor.prototype.route = function(req, res, next) {
 	var msg = {
-		"url": req.originalUrl,
+		"url": req._parsedOriginalUrl.pathname,
 		"method": req.method,
 		"params": req.params,
 		"query": req.query,
@@ -67,7 +67,7 @@ Receptor.prototype.route = function(req, res, next) {
 	};
 
 	var tag = msg.url.substr(1).split('/').join('.');
-	res.send( this.random(msg, 1, [tag], 10000)[0] );
+	res.send( this.random(msg, 1, [tag], 5000) );
 };
 
 module.exports = Receptor;

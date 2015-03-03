@@ -33,7 +33,6 @@ SocketBot.prototype.start = function() {
 	var self = this;
 	SocketBot.super_.prototype.start.apply(this);
 	this.socket = require('socket.io-client')(this.server, {'force new connection': true});
-
 	this.tag(this.tags);
 
 	this.socket.on('message', function(msg) {
@@ -44,11 +43,12 @@ SocketBot.prototype.start = function() {
 			self.get(msg);
 		}
 	});
-
+/*
 	this.socket.on('wait', function(msg) {
 		self.addJob(msg._id, msg.jobs);
 		self.done(msg._id);
 	});
+*/
 };
 
 SocketBot.prototype.stop = function() {
@@ -76,7 +76,7 @@ SocketBot.prototype.untag = function() {
 };
 
 SocketBot.prototype.send = function(msg, option) {
-	if(typeof msg != 'object') {
+	if(typeof msg != 'object' || Array.isArray(msg)) {
 		msg = {"data": msg};
 	}
 
@@ -148,7 +148,7 @@ SocketBot.prototype.getResponse = function(message) {
 
 SocketBot.prototype.response = function(msg, oldMsg) {
 	if(!oldMsg._from) { return false; }
-	if(typeof msg != 'object') { msg = {"data": msg}; }
+	if(typeof msg != 'object' || Array.isArray(msg)) { msg = {"data": msg}; }
 	msg._id = oldMsg._id;
 	msg._response = oldMsg._id;
 	this.peer(msg, oldMsg._from);

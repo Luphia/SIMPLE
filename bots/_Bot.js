@@ -88,6 +88,7 @@ Bot.prototype.wait = function(event) {
 	var rs;
 	if(now < timeout) {
 		rs = this.clone(this.result[event]);
+		if(rs.length == 1) { rs = rs[0]; }
 	}
 	else {
 		rs = false;
