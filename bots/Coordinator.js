@@ -109,7 +109,10 @@ Coordinator.prototype.tag = function(client, tag) {
 
 Coordinator.prototype.untag = function(client) {
 	for(var k in this.tags) {
-		this.tags[k].splice(this.tags[k].indexOf(client), 1);
+		var clientIndex = this.tags[k].indexOf(client);
+		if(clientIndex != -1) {
+			this.tags[k].splice(this.tags[k].indexOf(client), 1);
+		}
 	}
 };
 

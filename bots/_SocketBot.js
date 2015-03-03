@@ -52,7 +52,7 @@ SocketBot.prototype.start = function() {
 };
 
 SocketBot.prototype.stop = function() {
-	Coordinator.super_.prototype.stop.apply(this);
+	SocketBot.super_.prototype.stop.apply(this);
 	this.socket.disconnect();
 };
 
