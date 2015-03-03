@@ -1,3 +1,12 @@
+/*
+
+var ECDB = require('ecdb');
+var ecdb = new ECDB();
+ecdb.connect({"url": "mongodb://10.10.23.31:27010/easyDB"});
+ecdb.listData("topic");
+
+ */
+
 var SocketBot = require('./_SocketBot.js')
 ,	util = require('util')
 ,	ECDB = require('ecdb');

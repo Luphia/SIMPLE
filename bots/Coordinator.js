@@ -118,6 +118,7 @@ Coordinator.prototype.message = function(client, message) {
 		message = {"data": message};
 	}
 
+	message._option = message._option || {};
 	message._id = this.messageID(message);
 	message._from = client;
 
