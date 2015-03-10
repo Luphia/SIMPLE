@@ -28,13 +28,45 @@ Receptor.prototype.init = function(config) {
 
 	this.app.set('port', 80);
 	this.app.use(this.session);
-	this.app.use(this.filter);
 	this.app.use(bodyParser.urlencoded({ extended: false }));
 	this.app.use(bodyParser.json());
+	this.app.use(this.filter);
 	this.app.use(express.static(path.join(__dirname, '../public')));
 	this.app.use(this.router);
 
-	this.router.all('*', function(req, res, next) { self.route(req, res, next); });
+	this.ctrl = [];
+
+	/*
+    this.router.all('/', function(req, res, next) {
+            res.writeHead(302, {'Location': 'http://210.61.13.14'});
+            res.end();
+    });
+	*/
+	// this.router.all('*', function(req, res, next) { self.route(req, res, next); });
+};
+
+Receptor.prototype.addController = function(ctrl) {
+	var self = this;
+	ctrl.setAsk(function(msg, tag) {
+		var rs = self.api(msg, tag);
+		return rs;
+	});
+
+	this.ctrl[ctrl.name] = ctrl;
+	this.router.all(ctrl.path, function(req, res, next) {
+		var msg = {
+			"url": req._parsedOriginalUrl.pathname,
+			"method": req.method,
+			"params": req.params,
+			"query": req.query,
+			"body": req.body,
+			"sessionID": req.sessionID,
+			"session": req.session
+		};
+
+		res.result = ctrl.exec(msg);
+		res.send(res.result);
+	});
 };
 
 Receptor.prototype.start = function() {
@@ -51,7 +83,8 @@ Receptor.prototype.stop = function() {
 };
 
 Receptor.prototype.filter = function(req, res, next) {
-	res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Headers", "Content-Type,Content-Length, Authorization, Accept,X-Requested-With");
 	next();
 };
 
@@ -67,7 +100,13 @@ Receptor.prototype.route = function(req, res, next) {
 	};
 
 	var tag = msg.url.substr(1).split('/').join('.');
-	res.send( this.random(msg, 1, [tag], 5000) );
+	var rs = this.api(tag, msg);
+	res.send(rs);
+};
+
+Receptor.prototype.api = function(msg, tag) {
+	var rs = this.ctrl[tag].exec(msg);
+	return rs;
 };
 
 module.exports = Receptor;

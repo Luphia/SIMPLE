@@ -163,4 +163,15 @@ SocketBot.prototype.record = function(table, data) {
 	this.random(message, 1, 'recorder');
 };
 
+SocketBot.prototype.setAsk = function(func) {
+	if(typeof(func) == "function") {
+		this.ask = func;
+	}
+}
+SocketBot.prototype.ask = function(message, target) {
+	var rs;
+	console.log("I don't know how to ask");
+	return rs;
+};
+
 module.exports = SocketBot;

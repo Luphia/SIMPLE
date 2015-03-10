@@ -12,6 +12,7 @@ util.inherits(ApiBot, SocketBot);
 ApiBot.prototype.init = function(config) {
 	ApiBot.super_.prototype.init.call(this, config);
 	this.tags = ["api"];
+	this.path = "/api/";
 };
 
 ApiBot.prototype.start = function() {
@@ -24,11 +25,11 @@ ApiBot.prototype.stop = function() {
 
 ApiBot.prototype.get = function(msg) {
 	var rs;
-	rs = this.rest(msg);
+	rs = this.exec(msg);
 	this.response(rs, msg);
 };
 
-ApiBot.prototype.rest = function(msg) {
+ApiBot.prototype.exec = function(msg) {
 	var rs
 	,	method = "get"
 	,	options = {

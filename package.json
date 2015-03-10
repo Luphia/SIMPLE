@@ -2,9 +2,9 @@
   "name": "SIMPLE",
   "version": "0.0.0",
   "description": "Simple backend framework",
-  "main": "./bin/SIMPLE.js",
+  "main": "./bin/index.js",
   "bin": {
-    "SIMPLE": "./bin/SIMPLE.js"
+    "SIMPLE": "./bin/index.js"
   },
   "scripts": {
     "test": "./bin/test.js"
@@ -24,7 +24,7 @@
   "homepage": "https://github.com/Luphia/SIMPLE",
   "dependencies": {
     "body-parser": "^1.11.0",
-    "deasync": "0.0.8",
+    "deasync": "0.0.10",
     "ecdb": "0.0.0",
     "express": "^4.11.2",
     "express-session": "^1.10.2",
