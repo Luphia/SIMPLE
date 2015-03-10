@@ -48,12 +48,20 @@ ApiBot.prototype.exec = function(msg) {
 
 			data = tmpData
 			t3 = new Date();
-			rs = data;
+			rs = {
+				"result": 1,
+				"message": "",
+				"data": data
+			};
 		}
 		catch(e) {
 			console.log(e);
 			data = [];
-			rs = data;
+			rs = {
+				"result": 0,
+				"message": e.message,
+				"data": data
+			};
 		}
 	});
 
