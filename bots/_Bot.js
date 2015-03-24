@@ -26,9 +26,9 @@ Bot.prototype.exec = function(command) {
 	// do something
 };
 
-Bot.prototype.randomID = function() {
+Bot.prototype.randomID = function(n) {
 	var string = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	,	l = 8
+	,	l = parseInt(n) || 8
 	,	rs = "";
 	for(var i = 0; i < l; i++) {
 		rs += string[ Math.floor(Math.random() * string.length) ];

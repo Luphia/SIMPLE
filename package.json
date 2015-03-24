@@ -1,6 +1,6 @@
 {
   "name": "SIMPLE",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Simple backend framework",
   "main": "./bin/index.js",
   "bin": {
@@ -25,10 +25,13 @@
   "dependencies": {
     "body-parser": "^1.11.0",
     "deasync": "0.0.10",
-    "ecdb": "0.0.0",
+    "ecdb": ">=0.1.0",
+    "ecfile": ">=0.1.0",
     "express": "^4.11.2",
     "express-session": "^1.10.2",
+    "multer": "^0.1.8",
     "mysql": "^2.5.4",
+    "node-xlsx": "^0.5.1",
     "phantomjs": "^1.9.15",
     "request": "^2.53.0",
     "serve-favicon": "^2.2.0",
