@@ -53,7 +53,7 @@ Bot.prototype.exec = function (msg) {
 			var tablename = this.parseTable(data[k].data);
 			var table = {
 				"label": data[k].name,
-				"path": "/dataset/" + tablename
+				"path": "/dataset/" + tablename + "/"
 			};
 
 			rs.data.push(table);
