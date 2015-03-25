@@ -137,95 +137,6 @@ Bot.prototype.exec = function (msg) {
 	return rs.toJSON();
 };
 
-Bot.prototype.isRows = function(objs) {
-	if(!Array.isArray(objs)) { return false; }
-
-	var raw1 = objs[0];
-
-	for(var key in raw1) {
-		for(var j = 1; j < objs.length; j++) {
-			if(!objs[j].hasOwnProperty(key)) {
-				return false;
-			}
-		}
-	}
-
-	return true;
-};
-
-Bot.prototype.randomPick = function(data, n) {
-	var num = parseInt(n) || 1;
-	var arr = this.clone(data);
-	var result = [];
-
-	while(num-- > 0) {
-		result.push( arr.splice(parseInt(Math.random() * arr.length), 1)[0] );
-	}
-
-	if(result.length <= 1) {
-		result = result[0];
-	}
-
-	return result;
-};
-
-Bot.prototype.typeOfJSON = function(data) {
-	var type = typeof(data);
-	if(Array.isArray(data)) {
-		var checkdata = this.randomPick(data, 3);
-
-	}
-	else if(type == 'object'){
-
-	}
-
-	return type;
-}
-
-Bot.prototype.parseJSON = function(data) {
-
-/*
-type1
-[
-	{"key1": "value", "key2": "value", "key3": "value"},
-	{"key1": "value", "key2": "value", "key3": "value"},
-	{"key1": "value", "key2": "value", "key3": "value"}
-]
-
-type2
-[
-	[{"attr": "", "value": ""}, {"attr": "", "value": ""}, {"attr": "", "value": ""}],
-	[{"attr": "", "value": ""}, {"attr": "", "value": ""}, {"attr": "", "value": ""}],
-	[{"attr": "", "value": ""}, {"attr": "", "value": ""}, {"attr": "", "value": ""}]
-]
-
-type3
-[
-	["", "", "", ""],
-	["", "", "", ""],
-	["", "", "", ""]
-]
-
-type4
-{
-	"attr1": "",
-	"attr2": "",
-	"data" : [
-	]
-}
-*/
-
-
-};
-
-Bot.prototype.parseCSV = function() {
-
-};
-
-Bot.prototype.parseAPI = function() {
-
-};
-
 Bot.prototype.newDataset = function(dataset, label) {
 	var table = this.randomID(16);
 	var rs = {"name": table, "label": label};
@@ -251,8 +162,14 @@ type3:
 */
 
 	var row = {};
-	for(var k in column) {
-		row[column[k]] = rowdata[k];
+
+	if(util.isArray(rowdata)) {
+		for(var k in column) {
+			row[column[k]] = rowdata[k];
+		}
+	}
+	else if(typeof(rowdata) == 'object') {
+		row = rowdata;
 	}
 
 	return row;
