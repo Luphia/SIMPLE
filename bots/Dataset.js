@@ -30,7 +30,8 @@
 var ParentBot = require('./_SocketBot.js')
 ,	util = require('util')
 ,	ecDB = require('ecdb')
-,	ecFile = require('ecfile');
+,	ecFile = require('ecfile')
+,	Result = require('../classes/Result.js');
 
 var Bot = function (config) {
 	if (!config) config = {};
@@ -42,8 +43,9 @@ util.inherits(Bot, ParentBot);
 Bot.prototype.init = function (config) {
 	Bot.super_.prototype.init.call(this, config);
 	this.path = [
-		{"method": "get", "path": "/dataset/:table"},
-		{"method": "get", "path": "/dataset/"}
+		{"method": "get", "path": "/dataset/"},
+		{"method": "all", "path": "/dataset/:table"},
+		{"method": "all", "path": "/dataset/:table/:id"}
 	];
 
 	this.db = new ecDB();
@@ -51,14 +53,16 @@ Bot.prototype.init = function (config) {
 };
 
 Bot.prototype.exec = function (msg) {
-	var rs = {};
+	var rs = new Result();
 	var url = msg.url;
-	var pass, uri, table, sql, query;
+	var body = msg.body;
+	var pass, uri, table, sql, query, id, rsdata, info;
 
 	if(url) {
 		pass = (msg.method == 'GET' && (url.lastIndexOf('/') == url.length - 1) ? 'LIST' : msg.method) + url.split('/').length.toString();
 		uri = url.split('/');
 		table = msg.params.table;
+		id = msg.params.id;
 		sql = msg.query.sql;
 		query = msg.query.q;
 	}
@@ -68,60 +72,68 @@ Bot.prototype.exec = function (msg) {
 
 	switch (pass) {
 		case 'newDataset':
-			rs = this.newDataset(msg.body);
+			rsdata = this.newDataset(msg.body);
 			break;
 
 		case 'FIND':
-			//this.findData(req, res, next);
+			rsdata = this.db.find(table, query);
 			break;
 		case 'LIST3':
 			if (sql) {
-				//this.sql(req, res, next);
+				rsdata = this.db.sql(req, res, next);
 			}
 			else {
-				rs = this.listTable();
+				rsdata = this.db.listTable();
 			}
 			break;
 		case 'GET3':
-			//this.getSchema(req, res, next);
+			rsdata = this.db.getTable(table);
 			break;
 		case 'POST3':
-			//this.postTable(req, res, next);
+			var schema = body;
+			rsdata = this.db.postTable(table, schema);
 			break;
 		case 'PUT3':
-			//this.putTable(req, res, next);
+			var schema = body;
+			rsdata = this.db.putTable(table, schema);
 			break;
 		case 'DELETE3':
-			//this.delTable(req, res, next);
+			rsdata = this.db.deleteTable(table);
 			break;
 		case 'LIST4':
-			rs = this.listData(table);
+			rsdata = this.db.pageData(table, query);
 			break;
 		case 'GET4':
-			//this.getData(req, res, next);
+			rsdata = this.db.getData(table, id);
 			break;
 		case 'POST4':
-			//this.postData(req, res, next);
+			var data = body;
+			rsdata = this.db.postData(table, body);
 			break;
 		case 'PUT4':
+			var data = body;
 			if (query) {
-				//this.update(req, res, next);
+				rsdata = this.db.updateData(table, id, data);
 			}
 			else {
-				//this.putData(req, res, next);
+				rsdata = this.db.putData(table, id, data);
 			}
 			break;
 		case 'DELETE4':
-			//this.delData(req, res, next);
+			rsdata = this.db.deleteData(table, id);
 			break;
 
 		default:
-			//res.result.response(next, 1, pass, { url: req.originalUrl, method: req.method });
+			rsdata = msg;
 			break;
 	}
 
+	if(rsdata) {
+		rs.setResult(1);
+		rs.setData(rsdata);
+	}
 
-	return rs;
+	return rs.toJSON();
 };
 
 Bot.prototype.isRows = function(objs) {
@@ -277,16 +289,6 @@ Bot.prototype.rightJoin = function() {
 
 Bot.prototype.fullJoin = function() {
 
-};
-
-Bot.prototype.listTable = function() {
-	var rs = this.db.listTable();
-	return rs;
-};
-
-Bot.prototype.listData = function(table) {
-	var rs = this.db.listData(table);
-	return rs;
 };
 
 module.exports = Bot;
