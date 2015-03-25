@@ -72,7 +72,8 @@ Bot.prototype.exec = function (msg) {
 
 	switch (pass) {
 		case 'newDataset':
-			rsdata = this.newDataset(msg.body);
+			var label = msg.query.label;
+			rsdata = this.newDataset(msg.body, label);
 			break;
 
 		case 'FIND':
@@ -206,29 +207,12 @@ type3
 ]
 
 type4
-[
-	[
-		["", "", "", ""]
-		["", "", "", ""]
-	],
-	[
-		["", "", "", ""]
-		["", "", "", ""]
-	],
-	[
-		["", "", "", ""]
-		["", "", "", ""]
-	]
-]
-
-type5
 {
 	"attr1": "",
 	"attr2": "",
 	"data" : [
 	]
 }
-
 */
 
 
@@ -242,13 +226,16 @@ Bot.prototype.parseAPI = function() {
 
 };
 
-Bot.prototype.newDataset = function(dataset) {
-	var tablename = this.randomID(16);
-	var rs = {"tablename": tablename};
+Bot.prototype.newDataset = function(dataset, label) {
+	var table = this.randomID(16);
+	var rs = {"name": table, "label": label};
+	var rows = [];
+
 	for(var i = 1; i < dataset.length; i++) {
 		var row = this.parseRow(dataset[0], dataset[i]);
-		this.db.postData(tablename, row);
+		rows.push(row);
 	}
+	this.db.postData(rs, rows);
 
 	return rs;
 };
