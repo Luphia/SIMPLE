@@ -1,15 +1,3 @@
-/*
-var ExcelParser = require('./bots/ExcelParser.js');
-var ecFile = require('ecfile');
-var fs = require('fs');
-
-var excel = fs.readFileSync('xls1.xlsx');
-var ecfile = new ecFile(excel);
-var parser = new ExcelParser();
-parser.exec(ecfile.toJSON());
-
-*/
-
 var ParentBot = require('./_SocketBot.js')
 ,	fs = require('fs')
 ,	util = require('util')
@@ -169,6 +157,7 @@ type3:
 
 	var rows = [];
 	if(!util.isArray(arr[0])) {
+		rows.push({});
 		rows = rows.concat(arr);
 	}
 	else {
