@@ -73,7 +73,8 @@ Bot.prototype.exec = function (msg) {
 	switch (pass) {
 		case 'newDataset':
 			var label = msg.query.label;
-			rsdata = this.newDataset(msg.body, label);
+			var response = msg.query.response
+			rsdata = this.newDataset(msg.body, label, response);
 			message = "Set new "+msg.body+" Dataset Successful";
 			break;
 
@@ -83,7 +84,7 @@ Bot.prototype.exec = function (msg) {
 			break;
 		case 'LIST3':
 			if (sql) {
-				rsdata = this.db.sql(req, res, next);
+				rsdata = this.db.sql(sql);
 				message = "SQL Execute Successful";
 			}
 			else {
@@ -153,7 +154,7 @@ Bot.prototype.exec = function (msg) {
 	return rs.toJSON();
 };
 
-Bot.prototype.newDataset = function(dataset, label) {
+Bot.prototype.newDataset = function(dataset, label, response) {
 	var table = this.randomID(16);
 	var rs = {"name": table, "label": label};
 	var rows = [];
@@ -163,6 +164,9 @@ Bot.prototype.newDataset = function(dataset, label) {
 		rows.push(row);
 	}
 	this.db.postData(rs, rows);
+	if(response) {
+		rs.data = rows;
+	}
 
 	return rs;
 };

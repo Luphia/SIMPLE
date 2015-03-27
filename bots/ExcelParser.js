@@ -37,6 +37,7 @@ Bot.prototype.exec = function (msg) {
 
 	var result = new Result();
 	var datalist = [];
+	var response = !!msg.query.response;
 
 	for(var key in msg.files) {
 		var file = fs.readFileSync(msg.files[key]["path"]);
@@ -44,11 +45,12 @@ Bot.prototype.exec = function (msg) {
 		var data = xlsx.parse(ecfile.toBlob());
 
 		for(var k in data) {
-			var table = this.parseTable(data[k].data, data[k].name);
+			var table = this.parseTable(data[k].data, data[k].name, response);
 
 			var rs = {
 				"label": table.label,
-				"path": "/dataset/" + table.name + "/"
+				"path": "/dataset/" + table.name + "/",
+				"data": table.data
 			};
 
 			datalist.push(rs);
@@ -61,7 +63,7 @@ Bot.prototype.exec = function (msg) {
 	return result.toJSON();
 };
 
-Bot.prototype.parseTable = function(dataset, label) {
+Bot.prototype.parseTable = function(dataset, label, response) {
 	var msg = {
 		"method": "post",
 		"body": dataset,
@@ -69,6 +71,7 @@ Bot.prototype.parseTable = function(dataset, label) {
 	}
 
 	if(typeof(label) == 'string') { msg.query.label = label; }
+	msg.query.response = response;
 
 	var rs = this.ask(msg, "Dataset");
 
