@@ -111,7 +111,7 @@ Bot.prototype.randomPick = function(data, n) {
 	var arr = this.clone(data);
 	var result = [];
 
-	while(num-- > 0) {
+	while(((num--) * arr.length) > 0) {
 		result.push( arr.splice(parseInt(Math.random() * arr.length), 1)[0] );
 	}
 

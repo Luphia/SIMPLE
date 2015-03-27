@@ -32,7 +32,6 @@
     "multer": "^0.1.8",
     "mysql": "^2.5.4",
     "node-xlsx": "^0.5.1",
-    "phantomjs": "^1.9.15",
     "promise": "^6.1.0",
     "request": "^2.53.0",
     "serve-favicon": "^2.2.0",
