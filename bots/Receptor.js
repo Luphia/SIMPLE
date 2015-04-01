@@ -6,7 +6,8 @@ var SocketBot = require('./_SocketBot.js')
 ,	fs = require('fs')
 ,	path = require('path')
 ,	bodyParser = require('body-parser')
-,	multer  = require('multer');
+,	multer  = require('multer')
+,	Result = require('../classes/Result.js');
 
 var Receptor = function(config) {
 	this.init(config);
@@ -40,6 +41,7 @@ Receptor.prototype.init = function(config) {
 	this.app.use(this.filter);
 	this.app.use(express.static(path.join(__dirname, '../public')));
 	this.app.use(this.router);
+	this.app.use(this.response);
 
 	this.ctrl = [];
 
@@ -84,20 +86,9 @@ Receptor.prototype.addController = function(ctrl) {
 					"files": req.files
 				};
 
-				res.result = ctrl.exec(msg);
-				if(res.result && res.result.session) {
-					var sess = res.result.session;
-					for(var k in sess) {
-						if(sess[k] === null) {
-							delete req.session[k];
-						}
-						else {
-							req.session[k] = sess[k];
-						}
-					}
-				}
-
-				res.send(res.result);
+				result = ctrl.exec(msg);
+				res.result = typeof(result.toJSON) == 'function'? result: new Result(result);
+				next();
 			});
 		}
 	}
@@ -123,20 +114,27 @@ Receptor.prototype.filter = function(req, res, next) {
 	next();
 };
 
-Receptor.prototype.route = function(req, res, next) {
-	var msg = {
-		"url": req._parsedOriginalUrl.pathname,
-		"method": req.method,
-		"params": req.params,
-		"query": req.query,
-		"body": req.body,
-		"sessionID": req.sessionID,
-		"session": req.session
-	};
+Receptor.prototype.response = function(req, res, next) {
+	var result, session;
 
-	var tag = msg.url.substr(1).split('/').join('.');
-	var rs = this.api(tag, msg);
-	res.send(rs);
+	if(result = res.result) {
+		if(session = result.getSession()) {
+			for(var key in session) {
+				if(session[key] === null) {
+					delete req.session[key];
+				}
+				else {
+					req.session[key] = session[key];
+				}
+			}
+		}
+	}
+	else {
+		result = new Result();
+		result.setMessage("Invalid operation");
+	}
+
+	res.send(result.toJSON());
 };
 
 Receptor.prototype.api = function(msg, tag) {
