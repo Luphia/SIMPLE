@@ -30,3 +30,6 @@ node_modules
 # Dataset
 uploads
 dataset
+
+# Config
+config
