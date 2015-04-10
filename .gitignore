@@ -35,5 +35,6 @@ dataset
 config
 
 # Private files
+private.*
 *.private
 *.private.*
