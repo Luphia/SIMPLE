@@ -36,3 +36,4 @@ config
 
 # Private files
 *.private
+*.private.*
