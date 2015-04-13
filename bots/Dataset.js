@@ -115,8 +115,14 @@ Bot.prototype.exec = function (msg) {
 			message = "List Data to "+table+" Table Successful";
 			break;
 		case 'GET4':
-			rsdata = this.db.getData(table, id);
-			message = "Get Data from "+table+" Table Successful";
+			if(id.toLowerCase() == 'clean') {
+				rsdata = this.db.cleanTable(table);
+				message = "Table Clean: " + table;
+			}
+			else {
+				rsdata = this.db.getData(table, id);
+				message = "Get Data from "+table+" Table Successful";
+			}
 			break;
 		case 'POST4':
 			var data = body;

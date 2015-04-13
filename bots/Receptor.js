@@ -19,6 +19,7 @@ util.inherits(Receptor, SocketBot);
 Receptor.prototype.init = function(config) {
 	Receptor.super_.prototype.init.call(this, config);
 	var self = this;
+	this.serverPort = [3000, 80];
 
 	var upload = "./uploads/";
 	if (!fs.existsSync(upload)){
@@ -42,13 +43,26 @@ Receptor.prototype.init = function(config) {
 	this.router = express.Router();
 	this.app = express();
 	this.http = require('http').createServer(this.app);
+	this.http.on('error', function(err) {
+		if(err.syscall == 'listen') {
+			var nextPort = self.serverPort.pop() || self.listening + 1;
+			self.startServer(nextPort);
+		}
+		else {
+			throw err;
+		}
+	});
+	this.http.on('listening', function() {
+		console.log('Receptor is listening on port: %d', self.listening);
+	});
+
 	this.session = Session({
 		secret: this.randomID(),
 		resave: true,
 		saveUninitialized: true
 	});
 
-	this.app.set('port', 80);
+	this.app.set('port', this.serverPort.pop());
 	this.app.use(log4js.connectLogger(log4js.getLogger('catering.log'), { level: log4js.levels.INFO, format: ':remote-addr :user-agent :method :url :status - :response-time ms' }));
 	this.app.use(this.session);
 	this.app.use(bodyParser.urlencoded({ extended: false }));
@@ -106,7 +120,7 @@ Receptor.prototype.addController = function(ctrl) {
 					res.send(data);
 				});
 
-				if(!result) {
+				if(result) {
 					res.result = typeof(result.toJSON) == 'function'? result: new Result(result);
 					next();
 				}
@@ -120,8 +134,13 @@ Receptor.prototype.start = function() {
 	var self = this;
 	
 	var httpPort = this.app.get('port');
-	this.http.listen(httpPort, function () {});
+	this.startServer(httpPort);
 };
+
+Receptor.prototype.startServer = function(port) {
+	this.listening = port;
+	this.http.listen(port, function() {});
+}
 
 Receptor.prototype.stop = function() {
 	Receptor.super_.prototype.stop.apply(this);
@@ -129,17 +148,21 @@ Receptor.prototype.stop = function() {
 };
 
 Receptor.prototype.filter = function(req, res, next) {
-	res.result = new Result();
+	var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+	if(!req.session.ip) { req.session.ip = ip; }
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Headers", "Content-Type,Content-Length, Authorization, Accept,X-Requested-With");
 	next();
 };
 
 Receptor.prototype.response = function(req, res, next) {
-	var result, session;
+	var result = res.result
+	,	session;
 
-	if(result = res.result) {
-		if(session = result.getSession()) {
+	if(result) {
+		if(typeof(result.getSession) == 'function') {
+			session = result.getSession();
+
 			for(var key in session) {
 				if(session[key] === null) {
 					delete req.session[key];
@@ -155,7 +178,12 @@ Receptor.prototype.response = function(req, res, next) {
 		result.setMessage("Invalid operation");
 	}
 
-	res.send(result.toJSON());
+	if(typeof(result.toJSON) == 'function') {
+		res.send(result.toJSON());
+	}
+	else {
+		res.send(result);
+	}
 };
 
 Receptor.prototype.api = function(msg, tag) {
