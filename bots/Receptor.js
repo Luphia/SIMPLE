@@ -117,7 +117,12 @@ Receptor.prototype.addController = function(ctrl) {
 				};
 
 				var result = ctrl.exec(msg, function(err, data) {
-					res.result = typeof(data.toJSON) == 'function'? data: new Result(data);
+					res.result = data;
+					if(typeof(data.toJSON) == 'function') {
+						res.result = new Result();
+						result.setResult(!!data);
+						result.setData(data);
+					}
 					next();
 				});
 
