@@ -117,7 +117,8 @@ Receptor.prototype.addController = function(ctrl) {
 				};
 
 				var result = ctrl.exec(msg, function(err, data) {
-					res.send(data);
+					res.result = typeof(data.toJSON) == 'function'? data: new Result(data);
+					next();
 				});
 
 				if(result) {
@@ -179,14 +180,22 @@ Receptor.prototype.response = function(req, res, next) {
 	}
 
 	if(typeof(result.toJSON) == 'function') {
-		var msg = result.getMessage();
+		var json = result.toJSON();
 
-		if(msg == 'csv') {
-			res.header("Content-Type", "text/csv; charset=utf-8");
-			res.send(result.getData());
-		}
-		else {
-			res.send(result.toJSON());
+		switch(json.message) {
+			case 'csv':
+				res.header("Content-Type", "text/csv; charset=utf-8");
+				res.send(json.data);
+				break;
+
+			case 'json':
+				res.header("Content-Type", "text/json; charset=utf-8");
+				res.send(json.data);
+				break;
+
+			default:
+				res.send(result.toJSON());
+				break;
 		}
 	}
 	else {
