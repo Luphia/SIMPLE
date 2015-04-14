@@ -157,7 +157,7 @@ Bot.prototype.exec = function (msg) {
 		rs.setData(rsdata);
 	}
 
-	return rs.toJSON();
+	return rs;
 };
 
 Bot.prototype.newDataset = function(dataset, label, response) {

@@ -116,7 +116,7 @@ Receptor.prototype.addController = function(ctrl) {
 					"files": req.files
 				};
 
-				result = ctrl.exec(msg, function(err, data) {
+				var result = ctrl.exec(msg, function(err, data) {
 					res.send(data);
 				});
 
