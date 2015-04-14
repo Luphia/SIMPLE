@@ -179,7 +179,15 @@ Receptor.prototype.response = function(req, res, next) {
 	}
 
 	if(typeof(result.toJSON) == 'function') {
-		res.send(result.toJSON());
+		var msg = result.getMessage();
+
+		if(msg == 'csv') {
+			res.header("Content-Type", "text/csv; charset=utf-8");
+			res.send(result.getData());
+		}
+		else {
+			res.send(result.toJSON());
+		}
 	}
 	else {
 		res.send(result);
