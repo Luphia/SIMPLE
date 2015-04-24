@@ -31,9 +31,11 @@ ApiBot.prototype.get = function(msg) {
 
 ApiBot.prototype.exec = function(msg) {
 	var rs
-	,	method = "get"
+	,	method = (msg.method || "get").toLowerCase()
 	,	options = {
-			"url": msg.query.source
+			"url": msg.query.source,
+			"json": msg.body,
+			"method": msg.method || "GET"
 		}
 	;
 
@@ -44,7 +46,7 @@ ApiBot.prototype.exec = function(msg) {
 		var data;
 		t2 = new Date();
 		try {
-			var tmpData = JSON.parse(body);
+			var tmpData = typeof(body)=='object'? body: JSON.parse(body);
 
 			data = tmpData
 			t3 = new Date();
@@ -60,7 +62,7 @@ ApiBot.prototype.exec = function(msg) {
 			rs = {
 				"result": 0,
 				"message": e.message,
-				"data": data
+				"data": body
 			};
 		}
 	});
