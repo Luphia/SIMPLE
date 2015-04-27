@@ -8,6 +8,8 @@ var SocketBot = require('./_SocketBot.js')
 ,	path = require('path')
 ,	bodyParser = require('body-parser')
 ,	multer  = require('multer')
+,	ncp = require('ncp').ncp
+,	exec = require('child_process').exec
 ,	Result = require('../classes/Result.js');
 
 var Receptor = function(config) {
@@ -20,6 +22,7 @@ Receptor.prototype.init = function(config) {
 	Receptor.super_.prototype.init.call(this, config);
 	var self = this;
 	this.serverPort = [3000, 80];
+	this.modules = {};
 
 	var upload = "./uploads/";
 	if (!fs.existsSync(upload)){
@@ -84,7 +87,7 @@ Receptor.prototype.init = function(config) {
 	// this.router.all('*', function(req, res, next) { self.route(req, res, next); });
 };
 
-Receptor.prototype.addController = function(ctrl) {
+Receptor.prototype.addController = function(ctrl, moduleName) {
 	var self = this;
 	if(ctrl.name) { self.ctrl[ctrl.name] = ctrl; }
 	ctrl.setAsk(function(msg, tag) {
@@ -102,6 +105,8 @@ Receptor.prototype.addController = function(ctrl) {
 		if(typeof(ctrl.path[k]) == "string") { ctrl.path[k] = {"method": "all", "path": ctrl.path[k]}; }
 		var method = (ctrl.path[k].method || 'all').toLowerCase()
 		,	path = ctrl.path[k].path;
+
+		if(typeof(moduleName) == "string") { path = "/" + moduleName + path; }
 
 		if(typeof(this.router[method]) == "function") {
 			this.router[method](path, function(req, res, next) {
@@ -133,6 +138,46 @@ Receptor.prototype.addController = function(ctrl) {
 			});
 		}
 	}
+};
+
+Receptor.prototype.installModule = function(module) {
+	module = encodeURIComponent(module);
+	var child = exec('npm install ' + module, function(error, stdout, stderr) {
+		if (error !== null) {
+			console.log('exec error: ' + error);
+		}
+	});
+};
+Receptor.prototype.loadModule = function(module) {
+	module = encodeURIComponent(module);
+	if(!!this.modules[module]) { return true; }
+
+	try {
+		var simpleM = require(module);
+		this.modules[module] = simpleM;
+
+		this.addStaticServer(module, simpleM.public);
+		for(var k in simpleM.bots) {
+			var bot = new simpleM.bots[k]();
+			bot.name = k;
+			this.addController(bot, module);
+		}
+	}
+	catch(e) {
+		console.log(e);
+		return false;
+	}
+};
+Receptor.prototype.addStaticServer = function(moduleName, source) {
+	var destination = path.join(__dirname, '../public/', moduleName);
+	console.log(destination);
+	console.log(source);
+
+	ncp(source, destination, function (err) {
+		if (err) {
+			return console.error(err);
+		}
+	});
 };
 
 Receptor.prototype.start = function() {
