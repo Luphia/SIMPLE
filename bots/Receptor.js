@@ -163,8 +163,7 @@ Receptor.prototype.loadModule = function(module) {
 };
 Receptor.prototype.addSIMPLEModule = function(module, simpleM) {
 	this.modules[module] = simpleM;
-console.log(module);
-console.log(simpleM.public);
+
 	this.addStaticServer(module, simpleM.public);
 	for(var k in simpleM.bots) {
 		var bot = new simpleM.bots[k]();
