@@ -154,18 +154,22 @@ Receptor.prototype.loadModule = function(module) {
 
 	try {
 		var simpleM = require(module);
-		this.modules[module] = simpleM;
-
-		this.addStaticServer(module, simpleM.public);
-		for(var k in simpleM.bots) {
-			var bot = new simpleM.bots[k]();
-			bot.name = k;
-			this.addController(bot, module);
-		}
+		this.addSIMPLEModule(module, simpleM);
 	}
 	catch(e) {
 		console.log(e);
 		return false;
+	}
+};
+Receptor.prototype.addSIMPLEModule = function(module, simpleM) {
+	this.modules[module] = simpleM;
+console.log(module);
+console.log(simpleM.public);
+	this.addStaticServer(module, simpleM.public);
+	for(var k in simpleM.bots) {
+		var bot = new simpleM.bots[k]();
+		bot.name = k;
+		this.addController(bot, module);
 	}
 };
 Receptor.prototype.addStaticServer = function(moduleName, source) {
