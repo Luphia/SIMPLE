@@ -31,7 +31,5 @@ for(var key in files) {
 		receptor.addController(bot);
 
 		bot.start();
-
-		receptor
 	}
 }
