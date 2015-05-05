@@ -1,0 +1,18 @@
+<md-dialog aria-label="APP Store">
+  <h2 class="appStoreName">APP Store</h2>
+  <md-dialog-content class="appStoreContainer">
+    <div class="appStoreList">
+        <div class="storeApp clearfix" ng-repeat="app in appStoreList">
+          <div class="storeAppIcon appFormat"></div>
+          <div class="appDesc">
+            <h3>{{app.desc}}</h3>
+          </div>
+        </div>
+    </div>
+  </md-dialog-content>
+  <div class="md-actions" layout="row">
+    <md-button ng-click="cancel()" class="md-primary">
+     離開
+    </md-button>
+  </div>
+</md-dialog>

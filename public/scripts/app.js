@@ -98,7 +98,7 @@ angular.module('angularWidgetApp', ['ngRoute', 'angularWidget'])
       });
 
       $routeProvider.otherwise({
-          redirectTo: '/app1/'
+          redirectTo: '/appDesktop/'
       });
   })
   .config(function initializemanifestGenerator(widgetsProvider) {
