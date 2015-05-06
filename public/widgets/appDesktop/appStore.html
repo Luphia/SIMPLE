@@ -4,9 +4,11 @@
     <div class="appStoreList">
         <div class="storeApp clearfix" ng-repeat="app in appStoreList">
           <div class="storeAppIcon appFormat"></div>
-          <div class="appDesc">
-            <h3>{{app.desc}}</h3>
+          <div class="title">
+            <h3>{{app.name}}</h3>
+            <md-button class="md-raised inBtn" ng-click="inApp(app)">Install</md-button>
           </div>
+          <div class="appDesc">{{app.desc}}</div>
         </div>
     </div>
   </md-dialog-content>

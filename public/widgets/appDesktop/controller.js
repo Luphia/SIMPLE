@@ -27,8 +27,12 @@ function appStoreCtrl($scope, $mdDialog) {
 	$scope.appStoreList = []
   	for(var i=1; i<=50; i++){
   		var appname = "App"+i
-  		var desc = "This is" + appname
+  		var desc = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed posuere faucibus efficitur."
   		$scope.appStoreList.push({"name": appname, "desc": desc})	
+  	}
+
+  	$scope.inApp = function (app){
+  		
   	}
 
 	$scope.hide = function() {

@@ -5,6 +5,10 @@ body {
 	padding: 50px
 }
 
+img, fieldset {
+        border: 0;
+}
+
 .container {
 	clear: both;
 	position: relative;
@@ -14,14 +18,33 @@ body {
 	overflow: auto;
 }
 
-.appDesktop .appBg{
+.appDesktop .userApp .appBg{
 	background: url(../../img/appIconBgYellow.png) no-repeat 50% 50%;
 }
 
 .appDesktop .userApp{
-	width: 5%;
+	width: 6%;
 	float: left;
 	margin-right: 2%;
+	outline: none
+}
+
+.appDesktop .userApp:hover .appFormat{
+	width: 110px;
+	height: 110px;
+}
+
+.appDesktop .userApp:hover .appBg{
+	background-size: 110px 110px;
+}
+
+.appDesktop .userApp:active .appFormat{
+	width: 90px;
+	height: 90px;
+}
+
+.appDesktop .userApp:active .appBg{
+	background-size: 90px 90px;
 }
 
 .appDesktop .userApp .appName{
@@ -51,7 +74,7 @@ body {
 	width: 28%;
 	float: left;
 	margin: 5% 5% 10% 0%;
-	padding-top: 1%;
+	padding: 1% 0%;
 	box-shadow: 1px 1px 5px 0px rgba(0,0,0,0.5);
 	background-color: white
 }
@@ -60,13 +83,30 @@ body {
 	background: url(../../img/appIconBgBlue.png) no-repeat 50% 50%;
 }
 
+.appDesktop .appStoreContainer .storeApp .title{
+	width: 50%;
+	float: left;
+	margin-left: 10px;
+}
+
+.appDesktop .appStoreContainer .storeApp .title h3{
+	margin: 0;
+	margin-left: 15px;
+	font-size: 1.5em;
+}
+
+.appDesktop .appStoreContainer .storeApp .title .inBtn{
+	margin-top: 15px;
+}
+
 .appDesktop .appStoreContainer .appStoreList .appFormat{
 	float: none;
-	margin: 10px;
 	float: left;
+	margin: 0px 10px 10px 10px;
 }
 
 .appDesktop .appStoreContainer .appDesc{
+	color: rgba(0, 0, 0, 0.5);
 	float: left;
 	margin-left: 10px;
 }
@@ -88,6 +128,7 @@ body {
 md-dialog{
 	min-height: 70%;
 	min-width: 70%;
+	top: -5%;
 }
 
 md-dialog md-dialog-content{
