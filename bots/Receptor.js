@@ -78,6 +78,14 @@ Receptor.prototype.init = function(config) {
 
 	this.ctrl = [];
 
+	this.router.get('/mount/:module', function(req, res, next) {
+		var module = req.params.module;
+		self.installModule(module, true);
+		res.result = new Result();
+		res.result.setResult(1);
+		res.result.setMessage('Install module: ' + module);
+		next();
+	});
 	/*
     this.router.all('/', function(req, res, next) {
             res.writeHead(302, {'Location': 'http://210.61.13.14'});
@@ -107,7 +115,7 @@ Receptor.prototype.addController = function(ctrl, moduleName) {
 		,	path = ctrl.path[k].path;
 
 		if(typeof(moduleName) == "string") { path = "/" + moduleName + path; }
-
+console.log(path);
 		if(typeof(this.router[method]) == "function") {
 			this.router[method](path, function(req, res, next) {
 				var msg = {
@@ -140,15 +148,21 @@ Receptor.prototype.addController = function(ctrl, moduleName) {
 	}
 };
 
-Receptor.prototype.installModule = function(module) {
+Receptor.prototype.installModule = function(module, install) {
+	var self = this;
 	module = encodeURIComponent(module);
 	var child = exec('npm install ' + module, function(error, stdout, stderr) {
 		if (error !== null) {
 			console.log('exec error: ' + error);
 		}
+
+		if(!!install) {
+			self.loadModule(module);
+		}
 	});
 };
 Receptor.prototype.loadModule = function(module) {
+console.log('load module: %s', module);
 	module = encodeURIComponent(module);
 	if(!!this.modules[module]) { return true; }
 
@@ -166,6 +180,7 @@ Receptor.prototype.addSIMPLEModule = function(module, simpleM) {
 
 	this.addStaticServer(module, simpleM.public);
 	for(var k in simpleM.bots) {
+console.log(k);
 		var bot = new simpleM.bots[k]();
 		bot.name = k;
 		this.addController(bot, module);
@@ -173,8 +188,6 @@ Receptor.prototype.addSIMPLEModule = function(module, simpleM) {
 };
 Receptor.prototype.addStaticServer = function(moduleName, source) {
 	var destination = path.join(__dirname, '../public/', moduleName);
-	console.log(destination);
-	console.log(source);
 
 	ncp(source, destination, function (err) {
 		if (err) {

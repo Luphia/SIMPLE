@@ -13,6 +13,7 @@ var Coordinator = require(folder + 'Coordinator.js');
 var Receptor = require(folder + 'Receptor.js');
 var coordinator = new Coordinator();
 var receptor = new Receptor();
+var bots = [];
 coordinator.start();
 receptor.start();
 
@@ -30,6 +31,10 @@ for(var key in files) {
 
 		receptor.addController(bot);
 
-		bot.start();
+		bots.push(bot);
 	}
+}
+
+for(var k in bots) {
+	bots[k].start();
 }

@@ -1,3 +1,5 @@
+var child_process = require('child_process');
+
 var Bot = function(config) {
 	this.init(config);
 };
@@ -19,6 +21,29 @@ Bot.prototype.stop = function() {
 
 Bot.prototype.reset = function() {
 
+};
+
+Bot.prototype.cmd = function(command) {
+	var rs;
+	var options = {
+		encoding: 'utf8',
+		timeout: 0,
+		maxBuffer: 200*1024,
+		killSignal: 'SIGTERM',
+		cwd: null,
+		env: null
+	};
+	child_process.exec(command, options, function(err, stdout, stderr) {
+		if(err) { console.log(err); }
+		if(stderr) { console.log(stderr); }
+		rs = stdout;
+	});
+
+	while(rs === undefined) {
+		require('deasync').runLoopOnce();
+	}
+
+	return rs;
 };
 
 Bot.prototype.exec = function(command) {
