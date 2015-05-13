@@ -185,6 +185,9 @@ var convertDiskCapacity = function(diskCapacity) {
 	var result = 0.0;
 	
 	switch(unit) {
+		case 'TB':
+			result = parseFloat(value) * 1024 * 1024 * 1024 * 1024;
+			break;
 		case 'GB':
 			result = parseFloat(value) * 1024 * 1024 * 1024;
 			break;
