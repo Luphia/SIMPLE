@@ -29,7 +29,7 @@ Bot.prototype.start = function() {
 	var now = new Date() - 10000;
 
 	// 先執行一次，之後每分鐘執行一次。(系統啟動時才執行，以利取得系統資訊。)
-	console.log("初始化抓取系統資訊...");
+	//console.log("初始化抓取系統資訊...");
 	self.monitorData = self.info(collector);
 	
 	// 每隔一分鐘執行一次
@@ -50,8 +50,8 @@ Bot.prototype.stop = function() {
 Bot.prototype.exec = function(msg) {
 	var rs = new Result();
 
-	console.log("-------- [GET] Monitoring OS State --------");
-	console.log(this.monitorData);
+	//console.log("-------- [GET] Monitoring OS State --------");
+	//console.log(this.monitorData);
 	
 	rs.setResult(1);
 	rs.setMessage('Get System Information');
@@ -161,8 +161,8 @@ Bot.prototype.info = function(collector) {
 		}
 	};
 	
-	console.log("-------- Monitoring OS State --------");
-	console.log(monitorData);
+	//console.log("-------- Monitoring OS State --------");
+	//console.log(monitorData);
 	return monitorData;
 };
 
