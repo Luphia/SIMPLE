@@ -61,7 +61,7 @@ rm -f /usr/local/bin/npm
 sudo ln -s $PARENT_LOCATION/$NODE_FILENAME/bin/node /usr/local/bin
 sudo ln -s $PARENT_LOCATION/$NODE_FILENAME/bin/npm /usr/local/bin
 
-sudo setcap cap_net_bind_service=+ep /usr/local/bin/node
+sudo setcap cap_net_bind_service=+ep /opt/nodejs/$NODE_FILENAME/bin/node
 ```
 
 ### Deploy SIMPLE-SAMPLE
