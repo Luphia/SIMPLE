@@ -66,13 +66,14 @@ sudo setcap cap_net_bind_service=+ep /opt/nodejs/$NODE_FILENAME/bin/node
 
 ### Deploy SIMPLE-SAMPLE
 ```code
-git clone http://gitlab.ideas.iii.org.tw/simple_cooperation/simple-sample.git
-cd simple-sample
+npm install -g npm
+git clone https://github.com/Luphia/SIMPLE/
+cd SIMPLE
 npm install
 ```
 
 ### Startup
 ```code
-cd simple-sample
+cd SIMPLE
 node test
 ```
