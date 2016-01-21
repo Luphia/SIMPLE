@@ -1,47 +1,64 @@
-var SocketBot = require('./_SocketBot.js')
-,	util = require('util')
-,	log4js = require('log4js')
-,	express = require('express')
-,	Session = require('express-session')
-,	favicon = require('serve-favicon')
-,	fs = require('fs')
-,	path = require('path')
-,	bodyParser = require('body-parser')
-,	multer  = require('multer')
-,	ncp = require('ncp').ncp
-,	exec = require('child_process').exec
-,	Result = require('../classes/Result.js');
+const ParentBot = require('./_Bot.js');
+const util = require('util');
+const log4js = require('log4js');
+const express = require('express');
+const Session = require('express-session');
+const favicon = require('serve-favicon');
+const os = require('os');
+const exec = require('child_process').exec;
+const fs = require('fs');
+const crypto = require('crypto');
+const path = require('path');
+const bodyParser = require('body-parser');
+const multer  = require('multer');
+const http = require('http');
+const Result = require('../classes/Result.js');
+
+var pathCert = path.join(__dirname, '../config/cert.pfx'),
+		pathPw = path.join(__dirname, '../config/pw.txt'),
+		logger;
+
+var cleanDir = function(dirPath, removeSelf) {
+	try { var files = fs.readdirSync(dirPath); }
+	catch(e) { return; }
+	if (files.length > 0) {
+		for (var i = 0; i < files.length; i++) {
+			var filePath = path.join(dirPath, files[i]);
+			if (fs.statSync(filePath).isFile()) {
+				fs.unlinkSync(filePath);
+			}
+			else {
+				cleanDir(filePath, true);
+			}
+		}
+	}
+	if(removeSelf) {
+		fs.rmdirSync(dirPath);
+	}
+};
 
 var Receptor = function(config) {
 	this.init(config);
 };
 
-util.inherits(Receptor, SocketBot);
+util.inherits(Receptor, ParentBot);
 
 Receptor.prototype.init = function(config) {
+	var self = this;
 	Receptor.super_.prototype.init.call(this, config);
 	var self = this;
-	this.serverPort = [3000, 80];
-	this.modules = {};
+	this.serverPort = [5566, 80];
+	this.httpsPort = [7788, 443];
+	this.nodes = [];
+	this.monitorData = {};
+	this.monitorData.traffic = {in: 0, out: 0};
+	logger = config.logger;
 
-	var upload = "./uploads/";
-	if (!fs.existsSync(upload)){
-		fs.mkdirSync(upload);
-	}
-	var logs = "./logs/";
-	if (!fs.existsSync(logs)){
-		fs.mkdirSync(logs);
-	}
-
-	log4js.configure({
-		"appenders": [
-			{ "type": "console" },
-			{ "type": "dateFile", "filename": "./logs/catering", "category": "catering.log", "pattern": "-yyyy-MM-dd.log", "alwaysIncludePattern": true, "backups": 365 },
-			{ "type": "file", "filename": "./logs/catering.exception.log", "category": "catering.exception", "maxLogSize": 10485760, "backups": 10 },
-			{ "type": "file", "filename": "./logs/catering.threat.log", "category": "catering.threat", "maxLogSize": 10485760, "backups": 10 }
-		],
-		"replaceConsole": true
-	});
+	var folders = config.path || {};
+	var upload = folders.upload || "./uploads/";
+	var shards = folders.shards || "./shards/";
+	this.shardPath = shards;
+	var logs = folders.logs || "./logs/";
 
 	this.router = express.Router();
 	this.app = express();
@@ -56,8 +73,32 @@ Receptor.prototype.init = function(config) {
 		}
 	});
 	this.http.on('listening', function() {
-		console.log('Receptor is listening on port: %d', self.listening);
+		config.listening = self.listening;
 	});
+
+	// if has pxf -> create https service
+	if(fs.existsSync(pathCert)) {
+		this.pfx = fs.readFileSync(pathCert);
+		this.pfxpw = fs.readFileSync(pathPw);
+
+		this.https = require('https').createServer({
+			pfx: this.pfx,
+			passphrase: this.pfxpw
+		}, this.app);
+		this.https.on('error', function(err) {
+			if(err.syscall == 'listen') {
+				var nextPort = self.httpsPort.pop() || self.listeningHttps + 1;
+				self.startServer(nextPort);
+			}
+			else {
+				throw err;
+			}
+		});
+
+		this.https.on('listening', function() {
+			config.listeningHttps = self.listeningHttps;
+		});
+	}
 
 	this.session = Session({
 		secret: this.randomID(),
@@ -66,167 +107,161 @@ Receptor.prototype.init = function(config) {
 	});
 
 	this.app.set('port', this.serverPort.pop());
-	this.app.use(log4js.connectLogger(log4js.getLogger('catering.log'), { level: log4js.levels.INFO, format: ':remote-addr :user-agent :method :url :status - :response-time ms' }));
+	this.app.set('portHttps', this.httpsPort.pop());
 	this.app.use(this.session);
 	this.app.use(bodyParser.urlencoded({ extended: false }));
-	this.app.use(bodyParser.json({limit: '100mb'}));
-	this.app.use(multer({ dest: './uploads/', limit: '100mb'}));
-	this.app.use(this.filter);
-	this.app.use(express.static(path.join(__dirname, '../public')));
+	this.app.use(bodyParser.json({limit: '10mb'}));
+	this.app.use(function(req, res, next) { self.filter(req, res, next); });
+	this.app.use('/shard', express.static(shards));
 	this.app.use(this.router);
-	this.app.use(this.response);
-
+	this.app.use(this.returnData);
 	this.ctrl = [];
 
-	this.router.get('/mount/:module', function(req, res, next) {
-		var module = req.params.module;
-		self.installModule(module, true);
-		res.result = new Result();
-		res.result.setResult(1);
-		res.result.setMessage('Install module: ' + module);
+	this.router.get('/version/', function(req, res, next) {
+		var result = new Result();
+		result.setResult(1);
+		result.setMessage('Application info');
+		result.setData(self.config.package);
+		res.result = result;
 		next();
 	});
-	/*
-    this.router.all('/', function(req, res, next) {
-            res.writeHead(302, {'Location': 'http://210.61.13.14'});
-            res.end();
-    });
-	*/
-	// this.router.all('*', function(req, res, next) { self.route(req, res, next); });
-};
 
-Receptor.prototype.addController = function(ctrl, moduleName) {
-	var self = this;
-	if(ctrl.name) { self.ctrl[ctrl.name] = ctrl; }
-	ctrl.setAsk(function(msg, tag) {
-		var rs = self.api(msg, tag);
-		return rs;
-	});
+	this.router.post('/shard/:hash', multer({ dest: self.config.path.upload }).single('shard'), function(req, res, next) {
+		var result = new Result();
+		var rs = 0;
+		var toChecked = 0
 
-	if(!Array.isArray(ctrl.path)) {
-		ctrl.path = [ctrl.path];
-	}
+		var hash = req.params.hash;
+		var oldname = req.file.path;
+		var newname = path.join(self.shardPath, hash);
 
-	for(var k in ctrl.path) {
-		if(!ctrl.path[k]) { continue; }
+		var s = fs.ReadStream(oldname);
+		var shasum = crypto.createHash('sha1');
+		s.on('data', function(d) {
+			shasum.update(d);
+		});
+		s.on('error', function() {
+			result.setMessage("something wrong with: " + oldname);
+				s.close();
+				res.result = result;
+				next();
+				// End of Process
+		});
+		s.on('end', function() {
+			var d = shasum.digest('hex');
 
-		if(typeof(ctrl.path[k]) == "string") { ctrl.path[k] = {"method": "all", "path": ctrl.path[k]}; }
-		var method = (ctrl.path[k].method || 'all').toLowerCase()
-		,	path = ctrl.path[k].path;
+			if(hash.indexOf(d) == 0) {
+				var source = fs.createReadStream(oldname);
+				// if file exists, drop it
+				if(!fs.existsSync(newname)) {
+					var dest = fs.createWriteStream(newname);
+					source.pipe(dest);
+					source.on('end', function() {
+						fs.unlink(oldname, function() {});
+						fs.lstat(newname, function(err, data) {
+							if(!err) {
+								var size = data.size || 0;
+								self.spaceUsage += size;
+							}
+						});
+						source.close();
+						dest.close();
+					});
+				}
+				else {
+					fs.unlink(oldname, function() {});
+				}
 
-		if(typeof(moduleName) == "string") { path = "/" + moduleName + path; }
-console.log(path);
-		if(typeof(this.router[method]) == "function") {
-			this.router[method](path, function(req, res, next) {
-				var msg = {
-					"url": req._parsedOriginalUrl.pathname,
-					"method": req.method,
-					"params": req.params,
-					"query": req.query,
-					"body": req.body,
-					"sessionID": req.sessionID,
-					"session": req.session,
-					"files": req.files
-				};
+				result.setResult(1);
+				result.setData({});
 
-				var result = ctrl.exec(msg, function(err, data) {
-					res.result = data;
-					if(typeof(data.toJSON) == 'function') {
-						res.result = new Result();
-						result.setResult(!!data);
-						result.setData(data);
-					}
-					next();
+				res.result = result;
+				next();
+			}
+			else {
+				fs.unlink(oldname, function() {});
+				result.setData({
+					path: hash,
+					hash: d,
+					file: oldname
 				});
 
-				if(result) {
-					res.result = typeof(result.toJSON) == 'function'? result: new Result(result);
-					next();
-				}
-			});
-		}
-	}
-};
-
-Receptor.prototype.installModule = function(module, install) {
-	var self = this;
-	module = encodeURIComponent(module);
-	var child = exec('npm install ' + module, function(error, stdout, stderr) {
-		if (error !== null) {
-			console.log('exec error: ' + error);
-		}
-
-		if(!!install) {
-			self.loadModule(module);
-		}
-	});
-};
-Receptor.prototype.loadModule = function(module) {
-console.log('load module: %s', module);
-	module = encodeURIComponent(module);
-	if(!!this.modules[module]) { return true; }
-
-	try {
-		var simpleM = require(module);
-		this.addSIMPLEModule(module, simpleM);
-	}
-	catch(e) {
-		console.log(e);
-		return false;
-	}
-};
-Receptor.prototype.addSIMPLEModule = function(module, simpleM) {
-	this.modules[module] = simpleM;
-
-	this.addStaticServer(module, simpleM.public);
-	for(var k in simpleM.bots) {
-console.log(k);
-		var bot = new simpleM.bots[k]();
-		bot.name = k;
-		this.addController(bot, module);
-	}
-};
-Receptor.prototype.addStaticServer = function(moduleName, source) {
-	var destination = path.join(__dirname, '../public/', moduleName);
-
-	ncp(source, destination, function (err) {
-		if (err) {
-			return console.error(err);
-		}
+				res.result = result;
+				next();
+			}
+		});
 	});
 };
 
-Receptor.prototype.start = function() {
+Receptor.prototype.reset = function() {
+	logger.info.info('--- Reset ---');
+	cleanDir(this.config.path.shards);
+	cleanDir(this.config.path.upload);
+	cleanDir(this.config.path.dataset);
+
+	for(var k in this.ctrl) {
+		this.ctrl[k].reset();
+	}
+};
+
+Receptor.prototype.start = function(cb) {
 	Receptor.super_.prototype.start.apply(this);
 	var self = this;
-	
 	var httpPort = this.app.get('port');
-	this.startServer(httpPort);
+	var httpsPort = this.app.get('portHttps');
+	this.router.use(this.errorHandler);
+	this.startServer(httpPort, httpsPort, cb);
 };
 
-Receptor.prototype.startServer = function(port) {
+Receptor.prototype.startServer = function(port, httpsPort, cb) {
 	this.listening = port;
-	this.http.listen(port, function() {});
+	this.listeningHttps = httpsPort;
+	this.http.listen(port, function() {
+			if(typeof(cb) == 'function') { cb(); }
+	});
+
+	if(this.pfx) {
+		this.https.listen(httpsPort, function() {});
+	}
 }
 
 Receptor.prototype.stop = function() {
 	Receptor.super_.prototype.stop.apply(this);
 	this.http.close();
+
+	if(this.pfx) {
+		this.https.close();
+	}
 };
 
 Receptor.prototype.filter = function(req, res, next) {
-	var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+	var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress || '0.0.0.0';
+	var port = req.connection.remotePort;
+	parseIP = ip.match(/\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b/);
+	ip = !!parseIP? parseIP[0]: ip;
 	if(!req.session.ip) { req.session.ip = ip; }
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Headers", "Content-Type,Content-Length, Authorization, Accept,X-Requested-With");
+	if(!req.session.port) { req.session.port = port; }
+	var powerby = this.config.powerby;
+	res.header('X-Powered-By', powerby);
+	res.header('Client-ID', this.config.UUID);
+  res.header("Access-Control-Allow-Origin", "*");
+	res.header("Access-Control-Allow-Methods", "GET, PUT, POST, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type,Content-Length, Authorization, Accept,X-Requested-With");
 	next();
 };
 
-Receptor.prototype.response = function(req, res, next) {
+Receptor.prototype.errorHandler = function (err, req, res, next) {
+	logger.exception.error(err);
+	res.statusCode = 500;
+	res.json({result: 0, message: 'oops, something wrong...'});
+};
+
+Receptor.prototype.returnData = function(req, res, next) {
 	var result = res.result
 	,	session;
 
 	if(result) {
+
 		if(typeof(result.getSession) == 'function') {
 			session = result.getSession();
 
@@ -241,37 +276,34 @@ Receptor.prototype.response = function(req, res, next) {
 		}
 	}
 	else {
+		res.status(404);
 		result = new Result();
 		result.setMessage("Invalid operation");
 	}
 
 	if(typeof(result.toJSON) == 'function') {
 		var json = result.toJSON();
+		var isFile = new RegExp("^[a-zA-Z0-9\-]+/[a-zA-Z0-9\-]+$").test(json.message);
 
-		switch(json.message) {
-			case 'csv':
-				res.header("Content-Type", "text/csv; charset=utf-8");
-				res.send(json.data);
-				break;
+		if(isFile) {
+			res.header("Content-Type", json.message);
+			res.send(json.data);
+		}
+		else if(json.result >= 100) {
+			res.status(json.result);
+			for(var key in json.data) {
+				res.header(key, json.data[key]);
+			}
 
-			case 'json':
-				res.header("Content-Type", "text/json; charset=utf-8");
-				res.send(json.data);
-				break;
-
-			default:
-				res.send(result.toJSON());
-				break;
+			res.end();
+		}
+		else {
+			res.send(json);
 		}
 	}
 	else {
 		res.send(result);
 	}
-};
-
-Receptor.prototype.api = function(msg, tag) {
-	var rs = this.ctrl[tag].exec(msg);
-	return rs;
 };
 
 module.exports = Receptor;

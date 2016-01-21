@@ -1,4 +1,23 @@
-var child_process = require('child_process');
+/* test case
+
+var BOT = require('./bots/_Bot.js');
+var bot = new BOT();
+
+bot.addJob('a', 1, function(e, d) { console.log('finish job a'); console.log(d); })
+bot.addJob('b', 1, function(e, d) { console.log('finish job b'); console.log(d); });
+bot.addJob('b', 1);
+bot.done('b', {"msg": "Hi!"});
+bot.done('a', {"msg": "Yo!"});
+bot.addJob('b', 1);
+bot.done('b', {"msg": "How!"});
+bot.done('b', {"msg": "Are!"});
+bot.done('b', {"msg": "You!"});
+
+*/
+
+var child_process = require('child_process')
+,	Result = require('../classes/Result.js')
+;
 
 var Bot = function(config) {
 	this.init(config);
@@ -9,10 +28,17 @@ Bot.prototype.init = function(config) {
 	this.active = false;
 	this.waiting = {};
 	this.result = {};
+	this.callback = {};
+
+	if(!!config) {
+		this.db = config.db;
+	}
 };
 
-Bot.prototype.start = function() {
+Bot.prototype.start = function(callback) {
 	this.active = true;
+
+	if(typeof(callback) == 'function') { callback(); }
 };
 
 Bot.prototype.stop = function() {
@@ -20,10 +46,24 @@ Bot.prototype.stop = function() {
 };
 
 Bot.prototype.reset = function() {
-
+	this.stop();
+	this.init(this.config);
+	this.start();
 };
 
-Bot.prototype.cmd = function(command) {
+Bot.prototype.cbReturn = function(err, data, callback) {
+	if(typeof(callback) != 'function') {
+		callback = function(err, data) {
+			// err && (console.log(err));
+			// data && (console.log(data));
+		};
+	}
+
+	callback(err, data);
+};
+
+Bot.prototype.cmd = function(command, callback) {
+	var self = this;
 	var rs;
 	var options = {
 		encoding: 'utf8',
@@ -37,18 +77,19 @@ Bot.prototype.cmd = function(command) {
 		if(err) { console.log(err); }
 		if(stderr) { console.log(stderr); }
 		rs = stdout;
+
+		self.cbReturn(err, stdout, callback);
 	});
-
-	while(rs === undefined) {
-		require('deasync').runLoopOnce();
-	}
-
-	return rs;
 };
 
-Bot.prototype.exec = function(command) {
+Bot.prototype.exec = function(command, callback) {
 	command = this.translate(command);
-	// do something
+	if(typeof(this.work) == 'function') {
+		this.work(command, callback);
+	}
+	else {console.log(command);//--
+		callback(false, command);
+	}
 };
 
 Bot.prototype.randomID = function(n) {
@@ -83,11 +124,15 @@ Bot.prototype.initEvent = function(event) {
 	this.waiting[event] = 0;
 	this.result[event] = [];
 };
-Bot.prototype.addJob = function(event, n) {
+Bot.prototype.addJob = function(event, n, callback) {
 	if(!event) { event = "_job"; }
 	if(!this.waiting[event]) { this.initEvent(event); }
 
 	this.waiting[event] += n > 0? n: 1;
+
+	if(typeof(callback) == 'function') {
+		this.callback[event] = callback;
+	}
 };
 
 Bot.prototype.done = function(event, data) {
@@ -97,30 +142,12 @@ Bot.prototype.done = function(event, data) {
 
 	this.waiting[event] --;
 	this.waiting[event] = this.waiting[event] < 0? 0: this.waiting[event];
-};
 
-Bot.prototype.wait = function(event) {
-	if(!event) { event = "_job"; }
-	if(typeof this.waiting[event] == "undefined") { return false; }
-	var now = new Date()
-	,	timeout = new Date() * 1 + 10000;
-
-	while(this.waiting[event] > 0 && now < timeout) {
-		require('deasync').runLoopOnce();
-		now = new Date();
+	if(this.waiting[event] == 0) {
+		if(this.result[event].length == 1) { this.result[event] = this.result[event][0]; }
+		this.cbReturn(false, this.result[event], this.callback[event]);
+		this.cleanEvent(event);
 	}
-
-	var rs;
-	if(now < timeout) {
-		rs = this.clone(this.result[event]);
-		if(rs.length == 1) { rs = rs[0]; }
-	}
-	else {
-		rs = false;
-		console.log("%s timeout", event);
-	}
-	this.cleanEvent(event);
-	return rs;
 };
 
 Bot.prototype.cleanEvent = function(event) {
