@@ -9,7 +9,7 @@ var Bot = function (config) {
 util.inherits(Bot, ParentBot);
 
 Bot.prototype.init = function (config) {
-	Receptor.super_.prototype.init.call(this, config);
+	Bot.super_.prototype.init.call(this, config);
 };
 
 Bot.prototype.start = function () {

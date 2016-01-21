@@ -37,15 +37,15 @@ var cleanDir = function(dirPath, removeSelf) {
 	}
 };
 
-var Receptor = function(config) {
+var Bot = function(config) {
 	this.init(config);
 };
 
-util.inherits(Receptor, ParentBot);
+util.inherits(Bot, ParentBot);
 
-Receptor.prototype.init = function(config) {
+Bot.prototype.init = function(config) {
 	var self = this;
-	Receptor.super_.prototype.init.call(this, config);
+	Bot.super_.prototype.init.call(this, config);
 	var self = this;
 	this.serverPort = [5566, 80];
 	this.httpsPort = [7788, 443];
@@ -193,7 +193,7 @@ Receptor.prototype.init = function(config) {
 	});
 };
 
-Receptor.prototype.reset = function() {
+Bot.prototype.reset = function() {
 	logger.info.info('--- Reset ---');
 	cleanDir(this.config.path.shards);
 	cleanDir(this.config.path.upload);
@@ -204,8 +204,8 @@ Receptor.prototype.reset = function() {
 	}
 };
 
-Receptor.prototype.start = function(cb) {
-	Receptor.super_.prototype.start.apply(this);
+Bot.prototype.start = function(cb) {
+	Bot.super_.prototype.start.apply(this);
 	var self = this;
 	var httpPort = this.app.get('port');
 	var httpsPort = this.app.get('portHttps');
@@ -213,7 +213,7 @@ Receptor.prototype.start = function(cb) {
 	this.startServer(httpPort, httpsPort, cb);
 };
 
-Receptor.prototype.startServer = function(port, httpsPort, cb) {
+Bot.prototype.startServer = function(port, httpsPort, cb) {
 	this.listening = port;
 	this.listeningHttps = httpsPort;
 	this.http.listen(port, function() {
@@ -225,8 +225,8 @@ Receptor.prototype.startServer = function(port, httpsPort, cb) {
 	}
 }
 
-Receptor.prototype.stop = function() {
-	Receptor.super_.prototype.stop.apply(this);
+Bot.prototype.stop = function() {
+	Bot.super_.prototype.stop.apply(this);
 	this.http.close();
 
 	if(this.pfx) {
@@ -234,7 +234,7 @@ Receptor.prototype.stop = function() {
 	}
 };
 
-Receptor.prototype.filter = function(req, res, next) {
+Bot.prototype.filter = function(req, res, next) {
 	var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress || '0.0.0.0';
 	var port = req.connection.remotePort;
 	parseIP = ip.match(/\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b/);
@@ -250,13 +250,13 @@ Receptor.prototype.filter = function(req, res, next) {
 	next();
 };
 
-Receptor.prototype.errorHandler = function (err, req, res, next) {
+Bot.prototype.errorHandler = function (err, req, res, next) {
 	logger.exception.error(err);
 	res.statusCode = 500;
 	res.json({result: 0, message: 'oops, something wrong...'});
 };
 
-Receptor.prototype.returnData = function(req, res, next) {
+Bot.prototype.returnData = function(req, res, next) {
 	var result = res.result
 	,	session;
 
@@ -306,4 +306,4 @@ Receptor.prototype.returnData = function(req, res, next) {
 	}
 };
 
-module.exports = Receptor;
+module.exports = Bot;
