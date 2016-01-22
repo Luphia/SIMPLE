@@ -12,28 +12,94 @@ const path = require('path');
 const bodyParser = require('body-parser');
 const multer  = require('multer');
 const http = require('http');
+const echashcash = require('echashcash');
 const Result = require('../classes/Result.js');
 
 var pathCert = path.join(__dirname, '../config/cert.pfx'),
 		pathPw = path.join(__dirname, '../config/pw.txt'),
 		logger;
 
-var cleanDir = function(dirPath, removeSelf) {
-	try { var files = fs.readdirSync(dirPath); }
-	catch(e) { return; }
-	if (files.length > 0) {
-		for (var i = 0; i < files.length; i++) {
-			var filePath = path.join(dirPath, files[i]);
-			if (fs.statSync(filePath).isFile()) {
-				fs.unlinkSync(filePath);
-			}
-			else {
-				cleanDir(filePath, true);
+var checkLogin, checkHashCash, errorHandler, returnData;
+checkLogin = function (req, res, next) {
+	if(req.user === undefined) {
+		var result = new Result();
+		result.setResult(-1);
+		result.setMessage('User No Authorized');
+		res.result = result;
+		returnData(req, res, next)
+	}
+	else {
+		next();
+	}
+};
+checkHashCash = function (req, res, next) {
+	var hashcash = parseInt(req.headers.hashcash) || 0;
+	var content = req.url;
+	var now = new Date()/ 1;
+	var check = now - hashcash < req.allowDelay? echashcash.check(content, hashcash, req.hashcashLevel): false;
+	if(check) {
+		next();
+	}
+	else {
+		var result = new Result();
+		result.setResult(-2);
+		result.setMessage('Invalid Hashcash');
+		res.result = result;
+		returnData(req, res, next)
+	}
+};
+errorHandler = function (err, req, res, next) {
+	logger.exception.error(err);
+	res.statusCode = 500;
+	res.json({result: 0, message: 'oops, something wrong...'});
+};
+returnData = function(req, res, next) {
+	var result = res.result
+	,	session;
+
+	if(result) {
+
+		if(typeof(result.getSession) == 'function') {
+			session = result.getSession();
+
+			for(var key in session) {
+				if(session[key] === null) {
+					delete req.session[key];
+				}
+				else {
+					req.session[key] = session[key];
+				}
 			}
 		}
 	}
-	if(removeSelf) {
-		fs.rmdirSync(dirPath);
+	else {
+		res.status(404);
+		result = new Result();
+		result.setMessage("Invalid operation");
+	}
+
+	if(typeof(result.toJSON) == 'function') {
+		var json = result.toJSON();
+		var isFile = new RegExp("^[a-zA-Z0-9\-]+/[a-zA-Z0-9\-]+$").test(json.message);
+
+		if(isFile) {
+			res.header("Content-Type", json.message);
+			res.send(json.data);
+		}
+		else if(json.result >= 100) {
+			res.status(json.result);
+			for(var key in json.data) {
+				res.header(key, json.data[key]);
+			}
+
+			res.end();
+		}
+		else {
+			res.send(json);
+		}
+	}
+	else {
+		res.send(result);
 	}
 };
 
@@ -47,6 +113,8 @@ Bot.prototype.init = function(config) {
 	var self = this;
 	Bot.super_.prototype.init.call(this, config);
 	var self = this;
+	this.hashcashLevel = 3;
+	this.allowDelay = 10000;
 	this.serverPort = [5566, 80];
 	this.httpsPort = [7788, 443];
 	this.nodes = [];
@@ -110,98 +178,20 @@ Bot.prototype.init = function(config) {
 	this.app.set('portHttps', this.httpsPort.pop());
 	this.app.use(this.session);
 	this.app.use(bodyParser.urlencoded({ extended: false }));
-	this.app.use(bodyParser.json({limit: '10mb'}));
+	this.app.use(bodyParser.json({type: 'application/*+json'}));
 	this.app.use(function(req, res, next) { self.filter(req, res, next); });
-	this.app.use('/shard', express.static(shards));
 	this.app.use(this.router);
-	this.app.use(this.returnData);
+	this.app.use(returnData);
 	this.ctrl = [];
 
 	this.router.get('/version/', function(req, res, next) {
 		var result = new Result();
 		result.setResult(1);
-		result.setMessage('Application info');
+		result.setMessage('Application Information');
 		result.setData(self.config.package);
 		res.result = result;
 		next();
 	});
-
-	this.router.post('/shard/:hash', multer({ dest: self.config.path.upload }).single('shard'), function(req, res, next) {
-		var result = new Result();
-		var rs = 0;
-		var toChecked = 0
-
-		var hash = req.params.hash;
-		var oldname = req.file.path;
-		var newname = path.join(self.shardPath, hash);
-
-		var s = fs.ReadStream(oldname);
-		var shasum = crypto.createHash('sha1');
-		s.on('data', function(d) {
-			shasum.update(d);
-		});
-		s.on('error', function() {
-			result.setMessage("something wrong with: " + oldname);
-				s.close();
-				res.result = result;
-				next();
-				// End of Process
-		});
-		s.on('end', function() {
-			var d = shasum.digest('hex');
-
-			if(hash.indexOf(d) == 0) {
-				var source = fs.createReadStream(oldname);
-				// if file exists, drop it
-				if(!fs.existsSync(newname)) {
-					var dest = fs.createWriteStream(newname);
-					source.pipe(dest);
-					source.on('end', function() {
-						fs.unlink(oldname, function() {});
-						fs.lstat(newname, function(err, data) {
-							if(!err) {
-								var size = data.size || 0;
-								self.spaceUsage += size;
-							}
-						});
-						source.close();
-						dest.close();
-					});
-				}
-				else {
-					fs.unlink(oldname, function() {});
-				}
-
-				result.setResult(1);
-				result.setData({});
-
-				res.result = result;
-				next();
-			}
-			else {
-				fs.unlink(oldname, function() {});
-				result.setData({
-					path: hash,
-					hash: d,
-					file: oldname
-				});
-
-				res.result = result;
-				next();
-			}
-		});
-	});
-};
-
-Bot.prototype.reset = function() {
-	logger.info.info('--- Reset ---');
-	cleanDir(this.config.path.shards);
-	cleanDir(this.config.path.upload);
-	cleanDir(this.config.path.dataset);
-
-	for(var k in this.ctrl) {
-		this.ctrl[k].reset();
-	}
 };
 
 Bot.prototype.start = function(cb) {
@@ -209,7 +199,7 @@ Bot.prototype.start = function(cb) {
 	var self = this;
 	var httpPort = this.app.get('port');
 	var httpsPort = this.app.get('portHttps');
-	this.router.use(this.errorHandler);
+	this.router.use(errorHandler);
 	this.startServer(httpPort, httpsPort, cb);
 };
 
@@ -234,7 +224,7 @@ Bot.prototype.stop = function() {
 	}
 };
 
-Bot.prototype.filter = function(req, res, next) {
+Bot.prototype.filter = function (req, res, next) {
 	var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress || '0.0.0.0';
 	var port = req.connection.remotePort;
 	parseIP = ip.match(/\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b/);
@@ -246,64 +236,11 @@ Bot.prototype.filter = function(req, res, next) {
 	res.header('Client-ID', this.config.UUID);
   res.header("Access-Control-Allow-Origin", "*");
 	res.header("Access-Control-Allow-Methods", "GET, PUT, POST, DELETE, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type,Content-Length, Authorization, Accept,X-Requested-With");
 	next();
 };
 
-Bot.prototype.errorHandler = function (err, req, res, next) {
-	logger.exception.error(err);
-	res.statusCode = 500;
-	res.json({result: 0, message: 'oops, something wrong...'});
-};
+Bot.prototype.tokenParser = function (req, res, next) {
 
-Bot.prototype.returnData = function(req, res, next) {
-	var result = res.result
-	,	session;
-
-	if(result) {
-
-		if(typeof(result.getSession) == 'function') {
-			session = result.getSession();
-
-			for(var key in session) {
-				if(session[key] === null) {
-					delete req.session[key];
-				}
-				else {
-					req.session[key] = session[key];
-				}
-			}
-		}
-	}
-	else {
-		res.status(404);
-		result = new Result();
-		result.setMessage("Invalid operation");
-	}
-
-	if(typeof(result.toJSON) == 'function') {
-		var json = result.toJSON();
-		var isFile = new RegExp("^[a-zA-Z0-9\-]+/[a-zA-Z0-9\-]+$").test(json.message);
-
-		if(isFile) {
-			res.header("Content-Type", json.message);
-			res.send(json.data);
-		}
-		else if(json.result >= 100) {
-			res.status(json.result);
-			for(var key in json.data) {
-				res.header(key, json.data[key]);
-			}
-
-			res.end();
-		}
-		else {
-			res.send(json);
-		}
-	}
-	else {
-		res.send(result);
-	}
 };
 
 module.exports = Bot;
