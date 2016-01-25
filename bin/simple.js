@@ -3,11 +3,11 @@ const os = require('os');
 const fs = require('fs');
 const path = require('path');
 const log4js = require('log4js');
-const ecDB = require('ecdb');
 const dvalue = require('dvalue');
 const packageInfo = require('../package.json');
 
-var UUID, config, folders, ecdb;
+var mongodb = require('mongodb').MongoClient
+var UUID, config, folders;
 
 // initial folder
 var homepath = path.join(process.env.HOME || process.env.USERPROFILE, packageInfo.name);
@@ -64,10 +64,6 @@ catch(e) {
 var PID = process.pid;
 fs.writeFile(pathPID, PID, function(err) {});
 
-// connect db after folders ready
-ecdb = new ecDB({"driver": "EasyMongo"});
-ecdb.connect({"url": "mongodb://104.236.77.41:27056"}, function() {});
-
 // load config
 config = {
   UUID: UUID,
@@ -91,21 +87,23 @@ var getBot = function (name) {
   }
 };
 var startBot = function () {
-  var sub = "js";
-  var reg = new RegExp('\.' + sub + '$');
-  for(var key in files) {
-    if(reg.test(files[key]) && files[key].indexOf("_") == -1) {
-      var Bot = require(path.join(botFolder, files[key]));
-      var bot = new Bot(config);
-      bots.push(bot);
-      bot.name = files[key].split('.' + sub)[0];
-      bot.db = ecdb;
-      bot.getBot = getBot;
+  mongodb.connect("mongodb://104.236.77.41:27056/simple", function (e, db) {
+    var sub = "js";
+    var reg = new RegExp('\.' + sub + '$');
+    for(var key in files) {
+      if(reg.test(files[key]) && files[key].indexOf("_") == -1) {
+        var Bot = require(path.join(botFolder, files[key]));
+        var bot = new Bot(config);
+        bots.push(bot);
+        bot.name = files[key].split('.' + sub)[0];
+        bot.db = db;
+        bot.getBot = getBot;
+      }
     }
-  }
 
-  bots.map(function (b) {
-    b.start();
+    bots.map(function (b) {
+      b.start();
+    });
   });
 };
 startBot();

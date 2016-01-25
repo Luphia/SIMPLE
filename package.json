@@ -38,6 +38,7 @@
     "nodemailer-smtp-transport": "^2.0.1",
     "raid2x": "^0.1.23",
     "serve-favicon": "^2.3.0",
+    "textype": "^1.0.3",
     "udp2p": "^0.2.17"
   }
 }
