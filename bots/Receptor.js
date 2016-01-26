@@ -178,19 +178,97 @@ Bot.prototype.init = function(config) {
 	this.app.set('portHttps', this.httpsPort.pop());
 	this.app.use(this.session);
 	this.app.use(bodyParser.urlencoded({ extended: false }));
-	this.app.use(bodyParser.json({type: 'application/*+json'}));
+	this.app.use(bodyParser.json({}));
 	this.app.use(function(req, res, next) { self.filter(req, res, next); });
 	this.app.use(this.router);
 	this.app.use(returnData);
 	this.ctrl = [];
 
-	this.router.get('/version/', function(req, res, next) {
+	this.router.get('/version/', function (req, res, next) {
 		var result = new Result();
 		result.setResult(1);
 		result.setMessage('Application Information');
 		result.setData(self.config.package);
 		res.result = result;
 		next();
+	});
+	// register
+	this.router.post('/register/', function (req, res, next) {
+		var email = req.body.email;
+		var password = req.body.password;
+		var bot = self.getBot('User');
+		var result = new Result();
+		res.result = result;
+		bot.register(email, password, function (e, d) {
+			if(e) {
+				result.setMessage(e.message);
+				result.setData(e);
+			}
+			else {
+				result.setResult(1);
+				result.setMessage('Register new account');
+				result.setData(d);
+			}
+			next();
+		});
+	});
+	// verification
+	this.router.get('/verify/:id', function (req, res, next) {
+		var id = req.params.id;
+		var code = req.query.code;
+		var bot = self.getBot('User');
+		var result = new Result();
+		res.result = result;
+		bot.verify({id: id, code: code}, function (e, d) {
+			if(e) {
+				result.setMessage(e.message);
+				result.setData(e);
+			}
+			else {
+				result.setResult(1);
+				result.setMessage('Successfully verified');
+				result.setData(d);
+			}
+			next();
+		});
+	});
+	// send verify code by e-mail
+	this.router.get('/verifycode/:id', function (req, res, next) {
+		var id = req.params.id;
+		var bot = self.getBot('User');
+		var result = new Result();
+		res.result = result;
+		bot.resendVerifyCode(id, function (e, d) {
+			if(e) {
+				result.setMessage(e.message);
+				result.setData(e);
+			}
+			else {
+				result.setResult(1);
+				result.setMessage('Resend verify code');
+				result.setData(d);
+			}
+			next();
+		});
+	});
+	// login and generate token
+	this.router.post('/login/', function (req, res, next) {
+		var user = req.body;
+		var bot = self.getBot('User');
+		var result = new Result();
+		res.result = result;
+		bot.login(user, function (e, d) {
+			if(e) {
+				result.setMessage(e.message);
+				result.setData(e);
+			}
+			else {
+				result.setResult(1);
+				result.setMessage('login successfully');
+				result.setData(d);
+			}
+			next();
+		});
 	});
 };
 

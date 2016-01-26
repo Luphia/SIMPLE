@@ -1,5 +1,7 @@
 const ParentBot = require('./_Bot.js');
 const util = require('util');
+const mongodb = require('mongodb');
+const url = require('url');
 const raid2x = require('raid2x');
 const dvalue = require('dvalue');
 const textype = require('textype');
@@ -179,16 +181,50 @@ util.inherits(Bot, ParentBot);
 
 Bot.prototype.init = function (config) {
 	Bot.super_.prototype.init.call(this, config);
+	this.mailHistory = {};
 };
 
 Bot.prototype.start = function () {
+	var self = this;
+	/* reset
+	setTimeout(function () {
+		var collection = self.db.collection('Users');
+		collection.remove(
+			{},
+			{},
+			function (e2, d2) {
+				console.log(e2, d2);
+			}
+		);
+	}, 5000);
+	 */
+};
 
+Bot.prototype.addMailHistory = function (email) {
+	var self = this;
+	var now = new Date().getTime();
+	var rs;
+	this.mailHistory[email] = dvalue.default(this.mailHistory[email], []);
+	var t = this.mailHistory[email].reduce(function (pre, curr) {
+		if(now - curr < 86400000) { pre++; }
+		return pre;
+	}, 0);
+	this.mailHistory[email].map(function (v, i) {
+		if(now - v > 86400000) {
+			self.mailHistory[email].splice(i, 1);
+		}
+	});
+
+	rs = (t < 3);
+	if(rs) { this.mailHistory[email].push(now); }
+
+	return rs;
 };
 
 /* require: email, password(md5) */
 /* optional: nickname */
 /* 1: invalid e-mail, 2: account exist */
-Bot.prototype.regist = function (email, password, cb) {
+Bot.prototype.register = function (email, password, cb) {
 	var self = this;
 	cb = dvalue.default(cb, function () {});
 	// check email
@@ -216,33 +252,142 @@ Bot.prototype.regist = function (email, password, cb) {
 			code: code,
 			create: new Date().getTime()
 		};
-		collection.insertMany([user], function (err, result) {
-			console.log(err);
-			console.log(result);
-			self.sendValidCode(email, code, function () {});
-			// send valid code e-mail
+		collection.insertMany([user], function (e1, d1) {
+			if(e1) { return cb(e1); }
+			else {
+				// send valid code e-mail
+				cb(null, user._id);
+				self.sendValidCode(user, function (e2, d2) {});
+			}
 		});
 	});
 };
-/* require: email code */
-Bot.prototype.sendValidCode = function (email, code, cb) {
-	var template = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>iSunCloud</title></head><body style="margin: 0px;  font-family: Trebuchet MS, sans-serif, Helvetica, Microsoft JhengHei;  font-size: .8em;color: #332e3c;"><div style="width: 500px;margin: 10px auto;padding: 10px;border-radius: 5px;background: #E8DCB9;text-align: center;"><div style="font-size: 2em;text-align: center;">Welcome to iSunCloud</div><div><div style="margin-top: 20px;">valid code:</div><div style="color: #885533;font-size: 1.5em;">%s</div><a style="margin-top: 50px;font-size: 1.5em;line-height: 2em;color: #ffffff;background-color: #7798AB;border-radius: 5px;padding: 10px;display: block;" href="%s">Click to Verify Your Account</a></div><div>Not you? Please disregard this email.</div></div></body></html>';
-	var link = encodeURIComponent(sprintf('http://laria.space/verify?email=%s&code=%s', email, code));
-	var content = sprintf(template, code, link);
-	var bot = this.getBot("Mailer");
-	bot.send(email, content, cb);
+/* require: id */
+/* 1: No need to verify, 2: send too much */
+Bot.prototype.resendVerifyCode = function (id, cb) {
+	var self = this;
+	var collection = this.db.collection('Users');
+	var uid = new mongodb.ObjectID(id);
+	collection.find({_id: uid, key: {$exists: false}}).toArray(function (e, d) {
+		if(e) { return cb(e); }
+		else if(d.length == 0) {
+			e = new Error("No need to verify");
+			e.code = 1;
+			return cb(e);
+		}
+		var user = d[0];
+		self.sendValidCode(user, cb);
+	});
 };
-
-/* email, code */
-Bot.prototype.verify = function () {
+/* require: user._id, user.code */
+/* 2: send too much */
+Bot.prototype.sendValidCode = function (user, cb) {
+	var template = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>iSunCloud</title></head><body style="margin: 0px;  font-family: Trebuchet MS, sans-serif, Helvetica, Microsoft JhengHei;  font-size: .8em;color: #332e3c;"><div style="margin: 10px auto;padding: 10px;border-radius: 5px;background: #E8DCB9;text-align: center;"><div style="font-size: 2em;text-align: center;">Welcome to iSunCloud</div><div><div style="margin-top: 20px;">valid code:</div><div style="color: #885533;font-size: 1.5em;">%s</div><a style="margin-top: 50px;font-size: 1.5em;line-height: 2em;color: #ffffff;background-color: #7798AB;border-radius: 5px;padding: 10px;display: block;" href="%s">Click to Verify Your Account</a></div><div>Not you? Please disregard this email.</div></div></body></html>';
+	var link = url.format({
+		protocol: 'http',
+		host: 'laria.space',
+		pathname: '/verify/' + user._id,
+		query: {
+			code: user.code
+		}
+	});
+	var content = sprintf(template, user.code, link);
+	var bot = this.getBot("Mailer");
+	if(this.addMailHistory(user.email)) {
+		cb(null, user.email);
+		bot.send(user.email, content, cb);
+	}
+	else {
+		var e = new Error("You have reached a limit for sending email: " + user.email);
+		e.code = 2;
+		return cb(e);
+	}
+};
+/* require: user.id, user.code */
+/* 1: invalid code */
+Bot.prototype.verify = function (user, cb) {
 	// verify
-	// generateKey
-	// delete account not verify data
+	var collection = this.db.collection('Users');
+	var uid = new mongodb.ObjectID(user.id);
+	collection.find({
+		_id: uid,
+		code: user.code,
+		key: {$exists: false}
+	}).toArray(function (e, d) {
+		if(e) { return cb(e); }
+		else if(d.length == 0) {
+			e = new Error("Verify failed");
+			e.code = 1;
+			return cb(e);
+		}
+		else {
+			// generateKey
+			var vuser = d[0];
+			var key = raid2x.genKey(1024);
+			var pk = dvalue.XOR(new Buffer(key.private), new Buffer(user.id));
+
+			// update account
+			collection.updateOne(
+				{_id: uid},
+				{$set: {key: key}, $unset: { code: "" }},
+				{},
+				function (e1, d1) {
+					if(e1) { return cb(e1); }
+					// delete account not verify data
+					collection.remove(
+						{email: user.email, key: {$exists: false}},
+						{},
+						function (e2, d2) {
+							if(e2) { return cb(e2); }
+							cb(null);
+						}
+					);
+				}
+			);
+		}
+	});
 };
 /* email, password(md5) */
-Bot.prototype.login = function () {};
+/* 1: not verify, 2: failed */
+Bot.prototype.login = function (user, cb) {
+	var self = this;
+	var collection = this.db.collection('Users');
+	collection.find({email: user.email, password: user.password}).toArray(function (e, d) {
+		if(e) { return cb(e); }
+		else if(d.length == 0) {
+			e = new Error("Login failed");
+			e.code = 2;
+			return cb(e);
+		}
+		var user = d[0];
+		if(!user.key) {
+			e = new Error("Need to verify email address");
+			e.code = 1;
+			return cb(e);
+		}
+		else {
+			self.createToken(user, cb);
+		}
+	});
+};
+Bot.prototype.createToken = function (user, cb) {
+	var now = new Date().getTime();
+	var collection = this.db.collection('Tokens');
+	var token = {
+		uid: user._id,
+		renew: dvalue.randomID(8),
+		create: now
+	};
+	collection.insertMany([token], function (e, d) {
+		token.token = token._id;
+		delete token._id;
+		cb(e, token);
+	});
+};
 /* token, refreshToken */
-Bot.prototype.renew = function () {};
+Bot.prototype.renew = function (token, cb) {
+	
+};
 /* token */
 Bot.prototype.logout = function () {};
 

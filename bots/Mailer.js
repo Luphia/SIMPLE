@@ -19,9 +19,7 @@ Bot.prototype.start = function () {
 };
 
 Bot.prototype.send = function (email, content, cb) {
-	var mailTransport = nodemailer.createTransport(smtpTransport({
-
-	}));
+	var mailTransport = nodemailer.createTransport(smtpTransport({}));
 
 	var mailOptions = {
 		from: 'noreply@isuncloud.com',
@@ -29,7 +27,7 @@ Bot.prototype.send = function (email, content, cb) {
 		subject: 'Welcome to iSunCloud - account verification',
 		html: content
 	};
-	mailTransport.sendMail(mailOptions, function(e, d) { console.log(e, d); });
+	mailTransport.sendMail(mailOptions, function(e, d) {});
 };
 
 module.exports = Bot;
