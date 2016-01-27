@@ -6,6 +6,9 @@ const raid2x = require('raid2x');
 const dvalue = require('dvalue');
 const textype = require('textype');
 
+var tokenLife = 86400000;
+var renewLife = 604800000;
+
 var sprintf = (function() {
 	function get_type(variable) {
 		return Object.prototype.toString.call(variable).slice(8, -1).toLowerCase();
@@ -186,16 +189,11 @@ Bot.prototype.init = function (config) {
 
 Bot.prototype.start = function () {
 	var self = this;
+
 	/* reset
 	setTimeout(function () {
-		var collection = self.db.collection('Users');
-		collection.remove(
-			{},
-			{},
-			function (e2, d2) {
-				console.log(e2, d2);
-			}
-		);
+		self.db.collection('Users').remove({}, {}, function (e2, d2) { console.log(e2, d2); });
+		self.db.collection('Tokens').remove({}, {}, function (e2, d2) { console.log(e2, d2); });
 	}, 5000);
 	 */
 };
@@ -206,11 +204,11 @@ Bot.prototype.addMailHistory = function (email) {
 	var rs;
 	this.mailHistory[email] = dvalue.default(this.mailHistory[email], []);
 	var t = this.mailHistory[email].reduce(function (pre, curr) {
-		if(now - curr < 86400000) { pre++; }
+		if(now - curr < 1800000) { pre++; }
 		return pre;
 	}, 0);
 	this.mailHistory[email].map(function (v, i) {
-		if(now - v > 86400000) {
+		if(now - v > 1800000) {
 			self.mailHistory[email].splice(i, 1);
 		}
 	});
@@ -236,9 +234,9 @@ Bot.prototype.register = function (email, password, cb) {
 
 	// check exist
 	var collection = this.db.collection('Users');
-	collection.find({email: email, key: {$exists: true}}).toArray(function (e, d) {
+	collection.findOne({email: email, key: {$exists: true}}, {}, function (e, d) {
 		if(e) { return cb(e); }
-		else if(d.length > 0) {
+		else if(!!d) {
 			e = new Error("Exist account");
 			e.code = 2;
 			return cb(e);
@@ -252,7 +250,7 @@ Bot.prototype.register = function (email, password, cb) {
 			code: code,
 			create: new Date().getTime()
 		};
-		collection.insertMany([user], function (e1, d1) {
+		collection.insertOne(user, {}, function (e1, d1) {
 			if(e1) { return cb(e1); }
 			else {
 				// send valid code e-mail
@@ -268,14 +266,13 @@ Bot.prototype.resendVerifyCode = function (id, cb) {
 	var self = this;
 	var collection = this.db.collection('Users');
 	var uid = new mongodb.ObjectID(id);
-	collection.find({_id: uid, key: {$exists: false}}).toArray(function (e, d) {
+	collection.findOne({_id: uid, key: {$exists: false}}, {}, function (e, user) {
 		if(e) { return cb(e); }
-		else if(d.length == 0) {
+		else if(!user) {
 			e = new Error("No need to verify");
 			e.code = 1;
 			return cb(e);
 		}
-		var user = d[0];
 		self.sendValidCode(user, cb);
 	});
 };
@@ -309,20 +306,15 @@ Bot.prototype.verify = function (user, cb) {
 	// verify
 	var collection = this.db.collection('Users');
 	var uid = new mongodb.ObjectID(user.id);
-	collection.find({
-		_id: uid,
-		code: user.code,
-		key: {$exists: false}
-	}).toArray(function (e, d) {
+	collection.findOne({_id: uid, code: user.code, key: {$exists: false}}, {}, function (e, vuser) {
 		if(e) { return cb(e); }
-		else if(d.length == 0) {
+		else if(!vuser) {
 			e = new Error("Verify failed");
 			e.code = 1;
 			return cb(e);
 		}
 		else {
 			// generateKey
-			var vuser = d[0];
 			var key = raid2x.genKey(1024);
 			var pk = dvalue.XOR(new Buffer(key.private), new Buffer(user.id));
 
@@ -349,17 +341,17 @@ Bot.prototype.verify = function (user, cb) {
 };
 /* email, password(md5) */
 /* 1: not verify, 2: failed */
-Bot.prototype.login = function (user, cb) {
+Bot.prototype.login = function (data, cb) {
 	var self = this;
 	var collection = this.db.collection('Users');
-	collection.find({email: user.email, password: user.password}).toArray(function (e, d) {
+	var loginData = {email: (data.account || data.email), password: data.password};
+	collection.findOne(loginData, {}, function (e, user) {
 		if(e) { return cb(e); }
-		else if(d.length == 0) {
+		else if(!user) {
 			e = new Error("Login failed");
 			e.code = 2;
 			return cb(e);
 		}
-		var user = d[0];
 		if(!user.key) {
 			e = new Error("Need to verify email address");
 			e.code = 1;
@@ -375,20 +367,70 @@ Bot.prototype.createToken = function (user, cb) {
 	var collection = this.db.collection('Tokens');
 	var token = {
 		uid: user._id,
+		token: dvalue.randomID(24),
 		renew: dvalue.randomID(8),
 		create: now
 	};
-	collection.insertMany([token], function (e, d) {
-		token.token = token._id;
+	collection.insertOne(token, {}, function (e, d) {
 		delete token._id;
 		cb(e, token);
 	});
 };
-/* token, refreshToken */
+Bot.prototype.checkToken = function (token, cb) {
+	var now = new Date().getTime();
+	var collection = this.db.collection('Tokens');
+	collection.findOne({token: token}, {}, function (e, user) {
+		if(e) { return cb(e); }
+		var user = user || {};
+		cb(null, user.uid);
+	});
+};
+Bot.prototype.destroyToken = function (token, cb) {
+	var now = new Date().getTime();
+	var collection = this.db.collection('Tokens');
+	collection.findAndModify(
+		{token: token, destroy: {$exists: false}},
+		{},
+		{$set: {destroy: now}},
+		{},
+		cb
+	);
+};
+
+/* require: token.token, token.renew */
+/* 1: invalid token, 2: overdue */
 Bot.prototype.renew = function (token, cb) {
-	
+	var self = this;
+	var code = token.token;
+	var renew = token.renew;
+	var now = new Date().getTime();
+	var collection = this.db.collection('Tokens');
+	collection.findAndModify(
+		{token: code, renew: renew, destroy: {$exists: false}},
+		{},
+		{$set: {destroy: now}},
+		{},
+		function (e, d) {
+			if(e) { return cb(e); }
+			else if(!d.lastErrorObject.updatedExisting) {
+				e = new Error("invalid token");
+				e.code = 1;
+				return cb(e);
+			}
+			else if(now - d.value.create > renewLife) {
+				e = new Error("overdue token");
+				e.code = 2;
+				return cb(e);
+			}
+
+			self.createToken({_id: d.value.uid}, cb);
+		}
+	)
 };
 /* token */
-Bot.prototype.logout = function () {};
+Bot.prototype.logout = function (token, cb) {
+	this.destroyToken(token, function () {});
+	cb(null);
+};
 
 module.exports = Bot;

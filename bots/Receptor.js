@@ -13,6 +13,7 @@ const bodyParser = require('body-parser');
 const multer  = require('multer');
 const http = require('http');
 const echashcash = require('echashcash');
+const dvalue = require('dvalue');
 const Result = require('../classes/Result.js');
 
 var pathCert = path.join(__dirname, '../config/cert.pfx'),
@@ -269,6 +270,97 @@ Bot.prototype.init = function(config) {
 			}
 			next();
 		});
+	});
+	// renew token
+	this.router.get('/renew/:token', function (req, res, next) {
+		var token = {
+			token: req.params.token,
+			renew: req.query.renew
+		};
+		var bot = self.getBot('User');
+		var result = new Result();
+		res.result = result;
+		bot.renew(token, function (e, d) {
+			if(e) {
+				result.setMessage(e.message);
+				result.setData(e);
+			}
+			else {
+				result.setResult(1);
+				result.setMessage('token renew');
+				result.setData(d);
+			}
+			next();
+		});
+	});
+	// logout
+	this.router.get('/logout/', function (req, res, next) {
+		var result = new Result();
+		res.result = result;
+		result.setResult(1);
+		result.setMessage('You have been logged out, bye');
+		next();
+	});
+	this.router.get('/logout/:token', function (req, res, next) {
+		var token = req.params.token;
+		var bot = self.getBot('User');
+		var result = new Result();
+		res.result = result;
+		bot.logout(token, function (e, d) {
+			result.setResult(1);
+			result.setMessage('You have been logged out, bye');
+			next();
+		});
+	});
+	// get user info
+	this.router.get('/me/', function (req, res, next) {
+		var result = new Result();
+		res.result = result;
+		result.setResult(1);
+		result.setMessage('get user status');
+		var user = dvalue.default(req.user, {});
+		var d = {
+			ip: req.session.ip,
+			agent: req.headers["user-agent"]
+		};
+		d.login = !!user.uid;
+		if(user.uid) { d.uid = user.uid; }
+		result.setData(d);
+		next();
+	});
+	// upload file
+	// upload thumbnail
+	// get file list
+	this.router.get('/file/', function (req, res, next) {
+		var result = new Result();
+		res.result = result;
+		result.setResult(1);
+		result.setMessage('get file list');
+		next();
+	});
+	// get file metadata
+	this.router.get('/file/:fid/meta', function (req, res, next) {
+		var result = new Result();
+		res.result = result;
+		result.setResult(1);
+		result.setMessage('get file metadata: ' + req.params.fid);
+		next();
+	});
+	// download file
+	this.router.get('/file/:fid', function (req, res, next) {
+		var result = new Result();
+		res.result = result;
+		result.setResult(1);
+		result.setMessage('download file');
+		next();
+	});
+	// download thumbnail
+	this.router.get('/file/:fid/thumbnail', function (req, res, next) {
+		var result = new Result();
+		res.result = result;
+		result.setResult(1);
+		result.setMessage('download thumbnail: ' + req.params.fid);
+		next();
 	});
 };
 
