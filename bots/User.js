@@ -194,7 +194,7 @@ Bot.prototype.start = function () {
 	setTimeout(function () {
 		self.db.collection('Users').remove({}, {}, function (e2, d2) { console.log(e2, d2); });
 		self.db.collection('Tokens').remove({}, {}, function (e2, d2) { console.log(e2, d2); });
-	}, 5000);
+	}, 3000);
 	 */
 };
 
@@ -265,7 +265,8 @@ Bot.prototype.register = function (email, password, cb) {
 Bot.prototype.resendVerifyCode = function (id, cb) {
 	var self = this;
 	var collection = this.db.collection('Users');
-	var uid = new mongodb.ObjectID(id);
+	var uid = '';
+	try { uid = new mongodb.ObjectID(id); } catch(e) {}
 	collection.findOne({_id: uid, key: {$exists: false}}, {}, function (e, user) {
 		if(e) { return cb(e); }
 		else if(!user) {
@@ -304,8 +305,10 @@ Bot.prototype.sendValidCode = function (user, cb) {
 /* 1: invalid code */
 Bot.prototype.verify = function (user, cb) {
 	// verify
+	var self = this;
 	var collection = this.db.collection('Users');
-	var uid = new mongodb.ObjectID(user.id);
+	var uid = '';
+	try { uid = new mongodb.ObjectID(user.id); } catch(e) {}
 	collection.findOne({_id: uid, code: user.code, key: {$exists: false}}, {}, function (e, vuser) {
 		if(e) { return cb(e); }
 		else if(!vuser) {
@@ -331,11 +334,13 @@ Bot.prototype.verify = function (user, cb) {
 						{},
 						function (e2, d2) {
 							if(e2) { return cb(e2); }
-							cb(null);
 						}
 					);
 				}
 			);
+
+			// return token
+			self.createToken({_id: uid}, cb);
 		}
 	});
 };
