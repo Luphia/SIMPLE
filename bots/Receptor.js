@@ -329,38 +329,175 @@ Bot.prototype.init = function(config) {
 		next();
 	});
 	// upload file
+	this.router.post('/file/', multer({ dest: self.config.path.upload }).any(), function (req, res, next) {
+		var result = new Result();
+		res.result = result;
+		var bot = self.getBot('FileOperator');
+		var file = dvalue.default(req.files[0], {});
+		var user = dvalue.default(req.user, {});
+		file.uid = user.uid;
+		bot.addFile(file, function (e, d) {
+			if(e) {
+				result.setMessage(e.message);
+				result.setData(e);
+			}
+			else {
+				result.setResult(1);
+				result.setMessage('upload completed');
+				result.setData(d);
+			}
+			next();
+		});
+	});
 	// upload thumbnail
+	this.router.post('/file/:fid/thumbnail', multer({ dest: self.config.path.upload }).any(), function (req, res, next) {
+		var result = new Result();
+		res.result = result;
+		var bot = self.getBot('FileOperator');
+		var file = dvalue.default(req.files[0], {});
+		var user = dvalue.default(req.user, {});
+		file.uid = user.uid;
+		file.fid = req.params.fid;
+		bot.addThumbnail(file, function (e, d) {
+			if(e) {
+				result.setMessage(e.message);
+				result.setData(e);
+			}
+			else {
+				result.setResult(1);
+				result.setMessage('upload completed');
+				result.setData(d);
+			}
+			next();
+		});
+	});
 	// get file list
 	this.router.get('/file/', function (req, res, next) {
 		var result = new Result();
 		res.result = result;
-		result.setResult(1);
-		result.setMessage('get file list');
-		next();
+		var bot = self.getBot('FileOperator');
+		var user = dvalue.default(req.user, {});
+		bot.listFile(user.uid, function (e, d) {
+			if(e) {
+				result.setMessage(e.message);
+				result.setData(e);
+			}
+			else {
+				result.setResult(1);
+				result.setMessage('get file list');
+				result.setData(d);
+			}
+			next();
+		});
 	});
 	// get file metadata
 	this.router.get('/file/:fid/meta', function (req, res, next) {
 		var result = new Result();
 		res.result = result;
-		result.setResult(1);
-		result.setMessage('get file metadata: ' + req.params.fid);
-		next();
+		var bot = self.getBot('FileOperator');
+		var user = dvalue.default(req.user, {});
+		var file = {
+			uid: user.uid,
+			fid: req.params.fid
+		};
+		bot.getMetadata(file, function (e, d) {
+			if(e) {
+				result.setMessage(e.message);
+				result.setData(e);
+			}
+			else {
+				result.setResult(1);
+				result.setMessage('metadata: ' + file.fid);
+				result.setData(d);
+			}
+			next();
+		});
 	});
 	// download file
 	this.router.get('/file/:fid', function (req, res, next) {
 		var result = new Result();
 		res.result = result;
-		result.setResult(1);
-		result.setMessage('download file');
-		next();
+		var bot = self.getBot('FileOperator');
+		var user = dvalue.default(req.user, {});
+		var file = {
+			uid: user.uid,
+			fid: req.params.fid
+		};
+		bot.getFile(file, function (e, buffer) {
+			if(e) {
+				result.setResult(404);
+				result.setMessage('file not found');
+			}
+			else {
+				result.setResult(1);
+				result.setMessage(buffer.mimetype);
+				result.setData(buffer);
+			}
+			next();
+		});
 	});
 	// download thumbnail
 	this.router.get('/file/:fid/thumbnail', function (req, res, next) {
 		var result = new Result();
 		res.result = result;
-		result.setResult(1);
-		result.setMessage('download thumbnail: ' + req.params.fid);
-		next();
+		var bot = self.getBot('FileOperator');
+		var user = dvalue.default(req.user, {});
+		var file = {
+			uid: user.uid,
+			fid: req.params.fid
+		};
+		bot.getThumbnail(file, function (e, buffer) {
+			if(e) {
+				result.setResult(404);
+				result.setMessage('thumbnail not found');
+			}
+			else {
+				result.setResult(1);
+				result.setMessage(buffer.mimetype);
+				result.setData(buffer);
+			}
+			next();
+		});
+	});
+
+	// tracker
+	this.router.get('/node/:client', function (req, res, next) {
+		var tracker = self.getBot('tracker');
+		var msg = {
+			"url": req._parsedOriginalUrl.pathname,
+			"method": req.method,
+			"params": req.params,
+			"query": req.query,
+			"body": req.body,
+			"sessionID": req.sessionID,
+			"session": req.session,
+			"files": req.files
+		};
+
+		tracker.exec(msg, function(err, data) {
+			if(data.length == 1) { data = data[0]; }
+			res.result = new Result(data);
+			next();
+		});
+	});
+	this.router.get('/track/', function (req, res, next) {
+		var tracker = self.getBot('tracker');
+		var msg = {
+			"url": req._parsedOriginalUrl.pathname,
+			"method": req.method,
+			"params": req.params,
+			"query": req.query,
+			"body": req.body,
+			"sessionID": req.sessionID,
+			"session": req.session,
+			"files": req.files
+		};
+
+		tracker.exec(msg, function(err, data) {
+			if(data.length == 1) { data = data[0]; }
+			res.result = new Result(data);
+			next();
+		});
 	});
 };
 

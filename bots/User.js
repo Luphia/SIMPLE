@@ -254,7 +254,7 @@ Bot.prototype.register = function (email, password, cb) {
 			if(e1) { return cb(e1); }
 			else {
 				// send valid code e-mail
-				cb(null, user._id);
+				cb(null, {uid: user._id});
 				self.sendValidCode(user, function (e2, d2) {});
 			}
 		});
@@ -344,7 +344,7 @@ Bot.prototype.verify = function (user, cb) {
 		}
 	});
 };
-/* email, password(md5) */
+/* require: mail, password(md5) */
 /* 1: not verify, 2: failed */
 Bot.prototype.login = function (data, cb) {
 	var self = this;

@@ -24,6 +24,7 @@
   "homepage": "https://github.com/Luphia/SIMPLE",
   "dependencies": {
     "body-parser": "^1.14.2",
+    "borg-ring": "^0.1.1",
     "chokidar": "^1.4.2",
     "dvalue": "^1.0.6",
     "ecdb": "^0.2.11",
