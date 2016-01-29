@@ -37,13 +37,6 @@ checkLogin = function (req, res, next) {
 	}
 };
 checkHashCash = function (req, res, next) {
-console.log(req.headers.hashcash);
-var t = new Date().getTime();
-var c = [req.url, t, ""].join(":");
-var hc = echashcash(c);
-req.headers.hashcash = [t, hc].join(":");
-console.log(req.headers.hashcash);
-
 	var invalidHashcash = function () {
 		var result = new Result();
 		result.setResult(-2);

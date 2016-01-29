@@ -278,6 +278,11 @@ Bot.prototype.register = function (email, password, cb) {
 
 		// create account
 		var code = dvalue.randomID(8);
+		var randomID = function (n) { var ID = ''; var text = '0123456789'; n = parseInt(n); if(!(n > 0)) { n = 8; }
+			while(ID.length < n) { ID = ID.concat(text.charAt(parseInt(Math.random() * text.length))); }
+			return ID;
+		};
+		code = randomID();
 		var user = {
 			email: email,
 			password: password,
