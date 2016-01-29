@@ -38,9 +38,22 @@ checkLogin = function (req, res, next) {
 };
 checkHashCash = function (req, res, next) {
 	var invalidHashcash = function () {
+		//-- for test
+		var h = req.headers.hashcash;
+		var t = new Date().getTime();
+		if(h) { t = parseInt(h.split(":")[0]) || t; }
+		var c = [req.url, t, ""].join(":");
+		var hc = echashcash(c);
+		var d = {
+			hashcash: req.headers.hashcash,
+			sample: [t, hc].join(":")
+		};
+		if(new Date().getTime() - t > allowDelay) { d.information = "timeout"; }
+
 		var result = new Result();
 		result.setResult(-2);
 		result.setMessage('Invalid Hashcash');
+		result.setResult(d);	//-- for test
 		res.result = result;
 		returnData(req, res, next);
 	};

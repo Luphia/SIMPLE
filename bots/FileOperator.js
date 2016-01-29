@@ -117,7 +117,7 @@ Bot.prototype.listFile = function (uid, cb) {
     if(e) { return cb(e); }
     var list = d.map(function (v) {
       v.fid = v._id;
-      delete v.fid;
+      delete v._id;
       return v;
     });
     cb(null, list);
