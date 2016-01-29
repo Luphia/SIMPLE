@@ -198,6 +198,7 @@ Bot.prototype.init = function(config) {
 	this.app.set('portHttps', this.httpsPort.pop());
 	this.app.use(this.session);
 	this.app.use(function (req, res, next) { self.tokenParser(req, res, next); });
+	this.app.use(express.static(path.join(__dirname, '../public')));
 	this.app.use(bodyParser.urlencoded({ extended: false }));
 	this.app.use(bodyParser.json({}));
 	this.app.use(function(req, res, next) { self.filter(req, res, next); });
@@ -357,6 +358,7 @@ Bot.prototype.init = function(config) {
 		var bot = self.getBot('FileOperator');
 		var file = dvalue.default(req.files[0], {});
 		file.uid = req.session.uid;
+		file.custom = req.body;
 		bot.addFile(file, function (e, d) {
 			if(e) {
 				result.setMessage(e.message);
@@ -569,7 +571,7 @@ Bot.prototype.tokenParser = function (req, res, next) {
 	var token = !!auth? auth.split(" ")[1]: '';
 	bot.checkToken(token, function (e, d) {
 		if(!!d) {
-			req.session.uid = d;
+			req.session.uid = d.uid;
 		}
 		next();
 	});

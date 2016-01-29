@@ -45,6 +45,7 @@ Bot.prototype.addFile = function (file, cb) {
     var meta = f.getMeta(true, false);
     meta.name = file.originalname
     meta.mimetype = file.mimetype;
+		meta.custom = file.custom;
     meta.ctime = new Date().getTime();
     collection.insertOne(meta, {}, function (e1, d1) {
       if(e1) { return cb(e1); }
@@ -113,7 +114,7 @@ Bot.prototype.listFile = function (uid, cb) {
   var uid = dvalue.default(uid, 'default');
   var cname = [uid, 'files'].join('_');
   var collection = this.db.collection(cname);
-  collection.find({destroy: {$exists: false}}, {_id: 1, name: 1, size: 1, hash: 1, mimetype: 1}).toArray(function (e, d) {
+  collection.find({destroy: {$exists: false}}, {_id: 1, name: 1, size: 1, hash: 1, mimetype: 1, custom: 1}).toArray(function (e, d) {
     if(e) { return cb(e); }
     var list = d.map(function (v) {
       v.fid = v._id;

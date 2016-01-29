@@ -433,7 +433,8 @@ Bot.prototype.checkToken = function (token, cb) {
 	collection.findOne({token: token, create: {$gt: limit}, destroy: {$exists: false}}, {}, function (e, user) {
 		if(e) { return cb(e); }
 		var user = user || {};
-		cb(null, user.uid);
+		if(user.uid) { user.uid = user.uid.toString(); }
+		cb(null, user);
 	});
 };
 Bot.prototype.destroyToken = function (token, cb) {
