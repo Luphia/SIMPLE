@@ -45,7 +45,12 @@ Bot.prototype.addFile = function (file, cb) {
     var meta = f.getMeta(true, false);
     meta.name = file.originalname
     meta.mimetype = file.mimetype;
-		meta.custom = file.custom;
+		if(file.custom) {
+			for(var k in file.custom) {
+				try { file.custom[k] = JSON.parse(file.custom[k]); } catch(e) {}
+			}
+			meta.custom = file.custom;
+		}
     meta.ctime = new Date().getTime();
     collection.insertOne(meta, {}, function (e1, d1) {
       if(e1) { return cb(e1); }
