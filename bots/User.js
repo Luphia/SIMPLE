@@ -9,6 +9,40 @@ const textype = require('textype');
 var tokenLife = 86400000;
 var renewLife = 604800000;
 
+var CRCTable = (function() {
+	var c = 0, table = new Array(256);
+
+	for(var n = 0; n != 256; ++n) {
+		c = n;
+		c = ((c&1) ? (-306674912 ^ (c >>> 1)) : (c >>> 1));
+		c = ((c&1) ? (-306674912 ^ (c >>> 1)) : (c >>> 1));
+		c = ((c&1) ? (-306674912 ^ (c >>> 1)) : (c >>> 1));
+		c = ((c&1) ? (-306674912 ^ (c >>> 1)) : (c >>> 1));
+		c = ((c&1) ? (-306674912 ^ (c >>> 1)) : (c >>> 1));
+		c = ((c&1) ? (-306674912 ^ (c >>> 1)) : (c >>> 1));
+		c = ((c&1) ? (-306674912 ^ (c >>> 1)) : (c >>> 1));
+		c = ((c&1) ? (-306674912 ^ (c >>> 1)) : (c >>> 1));
+		table[n] = c;
+	}
+
+	return typeof Int32Array !== 'undefined' ? new Int32Array(table) : table;
+})();
+var CRC32 = function(buffer) {
+	var b, crc, i, len, code;
+	if(!Buffer.isBuffer(buffer)) { buffer = new Buffer(new String(buffer)); }
+	if(buffer.length > 10000) return CRC32_8(buffer);
+
+	for(var crc = -1, i = 0, len = buffer.length - 3; i < len;) {
+		crc = (crc >>> 8) ^ CRCTable[(crc ^ buffer[i++])&0xFF];
+		crc = (crc >>> 8) ^ CRCTable[(crc ^ buffer[i++])&0xFF];
+		crc = (crc >>> 8) ^ CRCTable[(crc ^ buffer[i++])&0xFF];
+		crc = (crc >>> 8) ^ CRCTable[(crc ^ buffer[i++])&0xFF];
+	}
+	while(i < len + 3) { crc = (crc >>> 8) ^ CRCTable[(crc ^ buffer[i++]) & 0xFF]; }
+	code = (crc > 0? crc: crc * -1).toString(16);
+	while(code.length < 8) { code = '0' + code; }
+	return code;
+};
 var sprintf = (function() {
 	function get_type(variable) {
 		return Object.prototype.toString.call(variable).slice(8, -1).toLowerCase();
@@ -292,8 +326,8 @@ Bot.prototype.sendValidCode = function (user, cb) {
 	var content = sprintf(template, user.code, link);
 	var bot = this.getBot("Mailer");
 	if(this.addMailHistory(user.email)) {
-		cb(null, user.email);
-		bot.send(user.email, content, cb);
+		cb(null, {email: user.email});
+		bot.send(user.email, content, function () {});
 	}
 	else {
 		var e = new Error("You have reached a limit for sending email: " + user.email);
@@ -370,9 +404,11 @@ Bot.prototype.login = function (data, cb) {
 Bot.prototype.createToken = function (user, cb) {
 	var now = new Date().getTime();
 	var collection = this.db.collection('Tokens');
+	var tbody = dvalue.randomID(24);
+	var tcrc = CRC32(tbody);
 	var token = {
 		uid: user._id,
-		token: dvalue.randomID(24),
+		token: tbody + tcrc,
 		renew: dvalue.randomID(8),
 		create: now
 	};
@@ -382,9 +418,14 @@ Bot.prototype.createToken = function (user, cb) {
 	});
 };
 Bot.prototype.checkToken = function (token, cb) {
-	var now = new Date().getTime();
+	if(typeof(token) != 'string' || token.length != 32) { return cb(); }
+	var tbody = token.substr(0, 24);
+	var tcrc = token.substr(24);
+	if(CRC32(tbody) != tcrc) { return cb(); }
+
+	var limit = new Date().getTime() - tokenLife;
 	var collection = this.db.collection('Tokens');
-	collection.findOne({token: token}, {}, function (e, user) {
+	collection.findOne({token: token, create: {$gt: limit}, destroy: {$exists: false}}, {}, function (e, user) {
 		if(e) { return cb(e); }
 		var user = user || {};
 		cb(null, user.uid);

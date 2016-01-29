@@ -16,13 +16,16 @@ const echashcash = require('echashcash');
 const dvalue = require('dvalue');
 const Result = require('../classes/Result.js');
 
+const hashcashLevel = 3;
+const allowDelay = 10000;
+
 var pathCert = path.join(__dirname, '../config/cert.pfx'),
 		pathPw = path.join(__dirname, '../config/pw.txt'),
 		logger;
 
 var checkLogin, checkHashCash, errorHandler, returnData;
 checkLogin = function (req, res, next) {
-	if(req.user === undefined) {
+	if(req.session.uid === undefined) {
 		var result = new Result();
 		result.setResult(-1);
 		result.setMessage('User No Authorized');
@@ -34,20 +37,32 @@ checkLogin = function (req, res, next) {
 	}
 };
 checkHashCash = function (req, res, next) {
-	var hashcash = parseInt(req.headers.hashcash) || 0;
-	var content = req.url;
-	var now = new Date()/ 1;
-	var check = now - hashcash < req.allowDelay? echashcash.check(content, hashcash, req.hashcashLevel): false;
-	if(check) {
-		next();
-	}
-	else {
+console.log(req.headers.hashcash);
+var t = new Date().getTime();
+var c = [req.url, t, ""].join(":");
+var hc = echashcash(c);
+req.headers.hashcash = [t, hc].join(":");
+console.log(req.headers.hashcash);
+
+	var invalidHashcash = function () {
 		var result = new Result();
 		result.setResult(-2);
 		result.setMessage('Invalid Hashcash');
 		res.result = result;
-		returnData(req, res, next)
+		returnData(req, res, next);
+	};
+
+	var hashcash = req.headers.hashcash;
+	if(!hashcash) { return invalidHashcash(); }
+	var cashdata = hashcash.split(":");
+	cashdata = cashdata.map(function (v) { return parseInt(v) || 0; });
+	var content = [req.url, cashdata[0], ""].join(":");
+	var now = new Date().getTime();
+	var check = now - cashdata[0] < allowDelay? echashcash.check(content, cashdata[1], hashcashLevel): false;
+	if(check) {
+		next();
 	}
+	else { return invalidHashcash(); }
 };
 errorHandler = function (err, req, res, next) {
 	logger.exception.error(err);
@@ -114,8 +129,6 @@ Bot.prototype.init = function(config) {
 	var self = this;
 	Bot.super_.prototype.init.call(this, config);
 	var self = this;
-	this.hashcashLevel = 3;
-	this.allowDelay = 10000;
 	this.serverPort = [5566, 80];
 	this.httpsPort = [7788, 443];
 	this.nodes = [];
@@ -178,6 +191,7 @@ Bot.prototype.init = function(config) {
 	this.app.set('port', this.serverPort.pop());
 	this.app.set('portHttps', this.httpsPort.pop());
 	this.app.use(this.session);
+	this.app.use(function (req, res, next) { self.tokenParser(req, res, next); });
 	this.app.use(bodyParser.urlencoded({ extended: false }));
 	this.app.use(bodyParser.json({}));
 	this.app.use(function(req, res, next) { self.filter(req, res, next); });
@@ -194,7 +208,7 @@ Bot.prototype.init = function(config) {
 		next();
 	});
 	// register
-	this.router.post('/register/', function (req, res, next) {
+	this.router.post('/register/', checkHashCash, function (req, res, next) {
 		var email = req.body.email;
 		var password = req.body.password;
 		var bot = self.getBot('User');
@@ -253,7 +267,7 @@ Bot.prototype.init = function(config) {
 		});
 	});
 	// login and generate token
-	this.router.post('/login/', function (req, res, next) {
+	this.router.post('/login/', checkHashCash, function (req, res, next) {
 		var user = req.body;
 		var bot = self.getBot('User');
 		var result = new Result();
@@ -267,12 +281,13 @@ Bot.prototype.init = function(config) {
 				result.setResult(1);
 				result.setMessage('login successfully');
 				result.setData(d);
+				req.session.uid = d.uid;
 			}
 			next();
 		});
 	});
 	// renew token
-	this.router.get('/renew/:token', function (req, res, next) {
+	this.router.get('/renew/:token', checkHashCash, function (req, res, next) {
 		var token = {
 			token: req.params.token,
 			renew: req.query.renew
@@ -299,6 +314,7 @@ Bot.prototype.init = function(config) {
 		res.result = result;
 		result.setResult(1);
 		result.setMessage('You have been logged out, bye');
+		delete req.session.uid;
 		next();
 	});
 	this.router.get('/logout/:token', function (req, res, next) {
@@ -309,6 +325,7 @@ Bot.prototype.init = function(config) {
 		bot.logout(token, function (e, d) {
 			result.setResult(1);
 			result.setMessage('You have been logged out, bye');
+			delete req.session.uid;
 			next();
 		});
 	});
@@ -318,24 +335,22 @@ Bot.prototype.init = function(config) {
 		res.result = result;
 		result.setResult(1);
 		result.setMessage('get user status');
-		var user = dvalue.default(req.user, {});
 		var d = {
 			ip: req.session.ip,
 			agent: req.headers["user-agent"]
 		};
-		d.login = !!user.uid;
-		if(user.uid) { d.uid = user.uid; }
+		d.login = !!req.session.uid;
+		if(req.session.uid) { d.uid = req.session.uid; }
 		result.setData(d);
 		next();
 	});
 	// upload file
-	this.router.post('/file/', multer({ dest: self.config.path.upload }).any(), function (req, res, next) {
+	this.router.post('/file/', checkLogin, multer({ dest: self.config.path.upload }).any(), function (req, res, next) {
 		var result = new Result();
 		res.result = result;
 		var bot = self.getBot('FileOperator');
 		var file = dvalue.default(req.files[0], {});
-		var user = dvalue.default(req.user, {});
-		file.uid = user.uid;
+		file.uid = req.session.uid;
 		bot.addFile(file, function (e, d) {
 			if(e) {
 				result.setMessage(e.message);
@@ -350,13 +365,12 @@ Bot.prototype.init = function(config) {
 		});
 	});
 	// upload thumbnail
-	this.router.post('/file/:fid/thumbnail', multer({ dest: self.config.path.upload }).any(), function (req, res, next) {
+	this.router.post('/file/:fid/thumbnail', checkLogin, multer({ dest: self.config.path.upload }).any(), function (req, res, next) {
 		var result = new Result();
 		res.result = result;
 		var bot = self.getBot('FileOperator');
 		var file = dvalue.default(req.files[0], {});
-		var user = dvalue.default(req.user, {});
-		file.uid = user.uid;
+		file.uid = req.session.uid;
 		file.fid = req.params.fid;
 		bot.addThumbnail(file, function (e, d) {
 			if(e) {
@@ -372,12 +386,12 @@ Bot.prototype.init = function(config) {
 		});
 	});
 	// get file list
-	this.router.get('/file/', function (req, res, next) {
+	this.router.get('/file/', checkLogin, function (req, res, next) {
 		var result = new Result();
 		res.result = result;
 		var bot = self.getBot('FileOperator');
 		var user = dvalue.default(req.user, {});
-		bot.listFile(user.uid, function (e, d) {
+		bot.listFile(req.session.uid, function (e, d) {
 			if(e) {
 				result.setMessage(e.message);
 				result.setData(e);
@@ -391,13 +405,12 @@ Bot.prototype.init = function(config) {
 		});
 	});
 	// get file metadata
-	this.router.get('/file/:fid/meta', function (req, res, next) {
+	this.router.get('/file/:fid/meta', checkLogin, function (req, res, next) {
 		var result = new Result();
 		res.result = result;
 		var bot = self.getBot('FileOperator');
-		var user = dvalue.default(req.user, {});
 		var file = {
-			uid: user.uid,
+			uid: req.session.uid,
 			fid: req.params.fid
 		};
 		bot.getMetadata(file, function (e, d) {
@@ -414,13 +427,12 @@ Bot.prototype.init = function(config) {
 		});
 	});
 	// download file
-	this.router.get('/file/:fid', function (req, res, next) {
+	this.router.get('/file/:fid', checkLogin, function (req, res, next) {
 		var result = new Result();
 		res.result = result;
 		var bot = self.getBot('FileOperator');
-		var user = dvalue.default(req.user, {});
 		var file = {
-			uid: user.uid,
+			uid: req.session.uid,
 			fid: req.params.fid
 		};
 		bot.getFile(file, function (e, buffer) {
@@ -437,13 +449,12 @@ Bot.prototype.init = function(config) {
 		});
 	});
 	// download thumbnail
-	this.router.get('/file/:fid/thumbnail', function (req, res, next) {
+	this.router.get('/file/:fid/thumbnail', checkLogin, function (req, res, next) {
 		var result = new Result();
 		res.result = result;
 		var bot = self.getBot('FileOperator');
-		var user = dvalue.default(req.user, {});
 		var file = {
-			uid: user.uid,
+			uid: req.session.uid,
 			fid: req.params.fid
 		};
 		bot.getThumbnail(file, function (e, buffer) {
@@ -547,7 +558,15 @@ Bot.prototype.filter = function (req, res, next) {
 };
 
 Bot.prototype.tokenParser = function (req, res, next) {
-
+	var bot = this.getBot('User');
+	var auth = req.headers.authorization;
+	var token = !!auth? auth.split(" ")[1]: '';
+	bot.checkToken(token, function (e, d) {
+		if(!!d) {
+			req.session.uid = d;
+		}
+		next();
+	});
 };
 
 module.exports = Bot;
