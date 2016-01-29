@@ -53,7 +53,7 @@ checkHashCash = function (req, res, next) {
 		var result = new Result();
 		result.setResult(-2);
 		result.setMessage('Invalid Hashcash');
-		result.setResult(d);	//-- for test
+		result.setData(d);	//-- for test
 		res.result = result;
 		returnData(req, res, next);
 	};
