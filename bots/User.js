@@ -494,7 +494,7 @@ Bot.prototype.resetPassword = function (email) {
 
 /* change password */
 /* require: uid, oldpassword, newpassword */
-Bot.prototype.changePassword = function (uid, old, new) {
+Bot.prototype.changePassword = function (uid, oldpassword, newpassword) {
 
 };
 
