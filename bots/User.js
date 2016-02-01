@@ -399,6 +399,7 @@ Bot.prototype.login = function (data, cb) {
 		if(!user.key) {
 			e = new Error("Need to verify email address");
 			e.code = 1;
+			e.uid = user._id.toString();
 			return cb(e);
 		}
 		else {
@@ -483,6 +484,18 @@ Bot.prototype.renew = function (token, cb) {
 Bot.prototype.logout = function (token, cb) {
 	this.destroyToken(token, function () {});
 	cb(null);
+};
+
+/* reset password */
+/* require: email */
+Bot.prototype.resetPassword = function (email) {
+
+};
+
+/* change password */
+/* require: uid, oldpassword, newpassword */
+Bot.prototype.changePassword = function (uid, old, new) {
+
 };
 
 module.exports = Bot;
