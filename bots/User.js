@@ -2,6 +2,7 @@ const ParentBot = require('./_Bot.js');
 const util = require('util');
 const mongodb = require('mongodb');
 const url = require('url');
+const crypto = require('crypto');
 const raid2x = require('raid2x');
 const dvalue = require('dvalue');
 const textype = require('textype');
@@ -329,10 +330,11 @@ Bot.prototype.sendValidCode = function (user, cb) {
 		}
 	});
 	var content = sprintf(template, user.code, link);
+	var subject = 'Welcome to iSunCloud - account verification';
 	var bot = this.getBot("Mailer");
 	if(this.addMailHistory(user.email)) {
 		cb(null, {email: user.email});
-		bot.send(user.email, content, function () {});
+		bot.send(user.email, subject, content, function () {});
 	}
 	else {
 		var e = new Error("You have reached a limit for sending email: " + user.email);
@@ -475,7 +477,6 @@ Bot.prototype.renew = function (token, cb) {
 				e.code = 2;
 				return cb(e);
 			}
-
 			self.createToken({_id: d.value.uid}, cb);
 		}
 	)
@@ -488,14 +489,81 @@ Bot.prototype.logout = function (token, cb) {
 
 /* reset password */
 /* require: email */
-Bot.prototype.resetPassword = function (email) {
+Bot.prototype.resetPassword = function (email, cb) {
+	var self = this;
+	if(this.addMailHistory(email)) {
+		var collection = this.db.collection('Users');
+		collection.findOne({email: email}, {}, function (e, user) {
+			if(e) { return cb(e); }
+			else if(!user) {
+				e = new Error("email not found");
+				e.code = 3;
+				e.uid = user._id.toString();
+				return cb(e);
+			}
+			else if(!user.key) {
+				e = new Error("Need to verify email address");
+				e.code = 1;
+				e.uid = user._id.toString();
+				return cb(e);
+			}
+			else {
+				var bot = self.getBot("Mailer");
+				var password = dvalue.randomID(12);
+				var encPassword = crypto.createHash('md5').update(password).update(':iSunCloud').digest('hex');
+				var subject = 'iSunCloud - Reset Password'
+				var content = sprintf('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>iSunCloud</title></head><body style="margin: 0px;  font-family: Trebuchet MS, sans-serif, Helvetica, Microsoft JhengHei;  font-size: .8em;color: #332e3c;"><div style="width: 500px;margin: 10px auto;padding: 10px;border-radius: 5px;background: #E8DCB9;text-align: center;"><div style="font-size: 2em;text-align: center;">iSunCloud - forget password</div><div><div style="margin-top: 20px;">New Password:</div><div style="color: #885533;font-size: 1.5em;">%s</div></div></div></body></html>', password);
+				bot.send(email, subject, content, function () {});
+				collection.findAndModify(
+					{_id: user._id},
+					{},
+					{$set: {password: encPassword}},
+					{},
+					function (e, d) {
+						if(e) { return cb(e); }
+						else {
+							var rs = { uid: user._id.toString(), password: password };
+							return cb(null, rs);
+						}
+					}
+				);
+			}
+		});
+	}
+	else {
+		var e = new Error("You have reached a limit for sending email: " + email);
+		e.code = 2;
+		return cb(e);
+	}
+};
+
+Bot.prototype.revertPassword = function (uid, code, cb) {
 
 };
 
 /* change password */
 /* require: uid, oldpassword, newpassword */
-Bot.prototype.changePassword = function (uid, oldpassword, newpassword) {
-
+Bot.prototype.changePassword = function (id, oldpassword, newpassword, cb) {
+	var collection = this.db.collection('Users');
+	var uid = '';
+	try { uid = new mongodb.ObjectID(id); } catch(e) {}
+	collection.findAndModify(
+		{_id: uid, password: oldpassword},
+		{},
+		{$set: {password: newpassword}},
+		{},
+		function (e, d) {
+			if(e) { return cb(e); }
+			else if(!d.lastErrorObject.updatedExisting) {
+				e = new Error("password error");
+				e.code = 1;
+				return cb(e);
+			}
+			else {
+				return cb();
+			}
+		}
+	);
 };
 
 module.exports = Bot;

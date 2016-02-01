@@ -293,6 +293,47 @@ Bot.prototype.init = function(config) {
 			next();
 		});
 	});
+	// reset password
+	this.router.get('/reset/:email', checkHashCash, function (req, res, next) {
+		var email = req.params.email;
+		var bot = self.getBot('User');
+		var result = new Result();
+		res.result = result;
+		bot.resetPassword(email, function (e, d) {
+			if(e) {
+				result.setMessage(e.message);
+				result.setData(e);
+			}
+			else {
+				result.setResult(1);
+				result.setMessage('successful password reset');
+			}
+			next();
+		});
+	});
+
+	// change password
+	this.router.post('/password/', checkLogin, function (req, res, next) {
+		var uid = req.session.uid;
+		var oldpassword = req.body.oldpassword;
+		var newpassword = req.body.newpassword;
+		var bot = self.getBot('User');
+		var result = new Result();
+		res.result = result;
+		bot.changePassword(uid, oldpassword, newpassword, function (e, d) {
+			if(e) {
+				result.setMessage(e.message);
+				result.setData(e);
+			}
+			else {
+				result.setResult(1);
+				result.setMessage('successful password change');
+				result.setData(d);
+			}
+			next();
+		});
+	});
+
 	// renew token
 	this.router.get('/renew/:token', checkHashCash, function (req, res, next) {
 		var token = {
