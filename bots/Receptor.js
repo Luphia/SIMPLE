@@ -123,6 +123,8 @@ returnData = function(req, res, next) {
 	else {
 		res.send(result);
 	}
+
+	logger.info.info(req.method, req.url, result.attr.result, req.session.ip);
 };
 
 var Bot = function(config) {
@@ -554,6 +556,27 @@ Bot.prototype.init = function(config) {
 		};
 
 		tracker.exec(msg, function(err, data) {
+			if(data.length == 1) { data = data[0]; }
+			res.result = new Result(data);
+			next();
+		});
+	});
+
+	// dataset
+	this.router.all('/dataset/', function (req, res, next) {
+		var dataset = self.getBot('Dataset');
+		var msg = {
+			"url": req._parsedOriginalUrl.pathname,
+			"method": req.method,
+			"params": req.params,
+			"query": req.query,
+			"body": req.body,
+			"sessionID": req.sessionID,
+			"session": req.session,
+			"files": req.files
+		};
+
+		dataset.exec(msg, function(err, data) {
 			if(data.length == 1) { data = data[0]; }
 			res.result = new Result(data);
 			next();
