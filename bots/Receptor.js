@@ -563,7 +563,7 @@ Bot.prototype.init = function(config) {
 	});
 
 	// dataset
-	this.router.all('/dataset/', function (req, res, next) {
+	this.router.all('/dataset/*', function (req, res, next) {
 		var dataset = self.getBot('Dataset');
 		var msg = {
 			"url": req._parsedOriginalUrl.pathname,
@@ -577,8 +577,7 @@ Bot.prototype.init = function(config) {
 		};
 
 		dataset.exec(msg, function(err, data) {
-			if(data.length == 1) { data = data[0]; }
-			res.result = new Result(data);
+			res.result = data;
 			next();
 		});
 	});
