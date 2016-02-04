@@ -296,7 +296,7 @@ Bot.prototype.init = function(config) {
 		});
 	});
 	// reset password
-	this.router.get('/reset/:email', checkHashCash, function (req, res, next) {
+	this.router.get('/password/:email/reset', checkHashCash, function (req, res, next) {
 		var email = req.params.email;
 		var bot = self.getBot('User');
 		var result = new Result();
