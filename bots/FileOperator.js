@@ -119,7 +119,7 @@ Bot.prototype.listFile = function (uid, cb) {
   var uid = dvalue.default(uid, 'default');
   var cname = [uid, 'files'].join('_');
   var collection = this.db.collection(cname);
-  collection.find({destroy: {$exists: false}}, {_id: 1, name: 1, size: 1, hash: 1, mimetype: 1, custom: 1}).sort({_id: -1}).toArray(function (e, d) {
+  collection.find({destroy: {$exists: false}}, {_id: 1, name: 1, size: 1, hash: 1, mimetype: 1, custom: 1}).sort({"custom.ctime": -1, _id: -1}).toArray(function (e, d) {
     if(e) { return cb(e); }
     var list = d.map(function (v) {
       v.fid = v._id;
