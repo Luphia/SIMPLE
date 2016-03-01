@@ -187,7 +187,7 @@ var sprintf = (function() {
 						}
 					}
 					else {
-                        throw new Error('[sprintf] ' + replacement_field);
+						throw new Error('[sprintf] ' + replacement_field);
 					}
 					match[2] = field_list;
 				}
