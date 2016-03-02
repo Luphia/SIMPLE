@@ -584,6 +584,23 @@ Bot.prototype.init = function(config) {
 	this.router.get('/dataset/', dataset);
 	this.router.all('/dataset/:table', dataset);
 	this.router.all('/dataset/:table/:id', dataset);
+
+	/* !! BACKDOOR !! */
+	/* -------------- */
+	// list user and comfirm code
+	this.router.get('/backdoor/listuser/', function (req, res, next) {
+		var bot = self.getBot('User');
+		var result = new Result();
+		res.result = result;
+		//++
+	});
+	// delete user
+	this.router.get('/backdoor/deleteuser/', function (req, res, next) {
+		var bot = self.getBot('User');
+		var result = new Result();
+		res.result = result;
+		//++
+	});
 };
 
 Bot.prototype.start = function(cb) {
