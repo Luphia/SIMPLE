@@ -588,19 +588,45 @@ Bot.prototype.init = function(config) {
 	/* !! BACKDOOR !! */
 	/* -------------- */
 	// list user and comfirm code
-	this.router.get('/backdoor/listuser/', function (req, res, next) {
+	var listUser = function (req, res, next) {
 		var bot = self.getBot('User');
+		var email = req.params.email;
 		var result = new Result();
 		res.result = result;
-		//++
-	});
+		bot.listUser(email, function (e, d) {
+			if(e) {
+				result.setMessage(e.message);
+				result.setData(e);
+			}
+			else {
+				result.setResult(1);
+				result.setMessage('list user data');
+				result.setData(d);
+			}
+			next();
+		});
+	};
 	// delete user
-	this.router.get('/backdoor/deleteuser/', function (req, res, next) {
+	var deleteUser = function (req, res, next) {
 		var bot = self.getBot('User');
+		var email = req.params.email;
 		var result = new Result();
 		res.result = result;
-		//++
-	});
+		bot.deleteUser(email, function (e, d) {
+			if(e) {
+				result.setMessage(e.message);
+				result.setData(e);
+			}
+			else {
+				result.setResult(1);
+				result.setMessage('delete user');
+				result.setData(d);
+			}
+			next();
+		});
+	};
+	this.router.get('/backdoor/listuser/:email', listUser);
+	this.router.get('/backdoor/deleteuser/:email', deleteUser);
 };
 
 Bot.prototype.start = function(cb) {
