@@ -521,6 +521,28 @@ Bot.prototype.init = function(config) {
 			next();
 		});
 	});
+	// delete file
+	this.router.delete('/file/:fid', checkLogin, function (req, res, next) {
+		var result = new Result();
+		res.result = result;
+		var bot = self.getBot('FileOperator');
+		var file = {
+			uid: req.session.uid,
+			fid: req.params.fid
+		};
+		bot.deleteFile(file, function (e, d) {
+			if(e) {
+				result.setMessage(e.message);
+				result.setData(e);
+			}
+			else {
+				result.setResult(1);
+				result.setMessage('delete file: ' + file.fid);
+				result.setData(d);
+			}
+			next();
+		});
+	});
 
 	// tracker
 	this.router.get('/node/:client', function (req, res, next) {

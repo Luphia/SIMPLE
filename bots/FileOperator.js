@@ -146,6 +146,32 @@ Bot.prototype.getFile = function (file, cb) {
   });
 };
 
+Bot.prototype.deleteFile = function (file, cb) {
+	var uid = dvalue.default(file.uid, 'default');
+  var fid = '';
+	var now = new Date().getTime();
+  var cname = [uid, 'files'].join('_');
+  var collection = this.db.collection(cname);
+	try { fid = new mongodb.ObjectID(file.fid); } catch(e) {}
+	collection.findAndModify(
+		{_id: fid, destroy: {$exists: false}},
+		{},
+		{$set: {destroy: now}},
+		{},
+		function (e, d) {
+			if(e) { return cb(e); }
+			else if(!d.lastErrorObject.updatedExisting) {
+				e = new Error("file not found: " + file.fid);
+				e.code = 1;
+				return cb(e);
+			}
+			else {
+				return cb();
+			}
+		}
+	);
+};
+
 Bot.prototype.getThumbnail = function (file, cb) {
   var uid = dvalue.default(file.uid, 'default');
   var fid = file.fid;
