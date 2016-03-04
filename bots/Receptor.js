@@ -543,6 +543,28 @@ Bot.prototype.init = function(config) {
 			next();
 		});
 	});
+	// delete files
+	this.router.put('/delete/', checkLogin, function (req, res, next) {
+		var result = new Result();
+		res.result = result;
+		var bot = self.getBot('FileOperator');
+		var file = {
+			uid: req.session.uid,
+			fid: req.body
+		};
+		bot.deleteFiles(file, function (e, d) {
+			if(e) {
+				result.setMessage(e.message);
+				result.setData(e);
+			}
+			else {
+				result.setResult(1);
+				result.setMessage('delete ' + d + ' files');
+				result.setData();
+			}
+			next();
+		});
+	});
 
 	// tracker
 	this.router.get('/node/:client', function (req, res, next) {

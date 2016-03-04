@@ -172,6 +172,34 @@ Bot.prototype.deleteFile = function (file, cb) {
 	);
 };
 
+Bot.prototype.deleteFiles = function (file, cb) {
+	var uid = dvalue.default(file.uid, 'default');
+	if(!Array.isArray(file.fid)) { file.fid = [file.fid]; }
+  var fid = [];
+	var now = new Date().getTime();
+  var cname = [uid, 'files'].join('_');
+  var collection = this.db.collection(cname);
+	file.fid.map(function (v) {
+		try { fid.push( new mongodb.ObjectID(v) ); } catch(e) {}
+	});
+
+	var cond = {_id: {$in: fid}, destroy: {$exists: false}};
+
+	collection.update(
+		cond,
+		{$set: {destroy: now}},
+		{multi: true},
+		function (e, d) {
+			var n;
+			if(e) { return cb(e); }
+			else {
+				try { n = d.result.nModified; } catch(e) { n = 0; }
+				return cb(null, n);
+			}
+		}
+	);
+};
+
 Bot.prototype.getThumbnail = function (file, cb) {
   var uid = dvalue.default(file.uid, 'default');
   var fid = file.fid;
