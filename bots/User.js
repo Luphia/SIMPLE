@@ -371,7 +371,7 @@ Bot.prototype.verify = function (user, cb) {
 					if(e1) { return cb(e1); }
 					// delete account not verify data
 					collection.remove(
-						{email: user.email, key: {$exists: false}},
+						{email: vuser.email, key: {$exists: false}},
 						{},
 						function (e2, d2) {
 							if(e2) { return cb(e2); }
