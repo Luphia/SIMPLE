@@ -313,7 +313,6 @@ Bot.prototype.init = function(config) {
 			next();
 		});
 	});
-
 	// change password
 	this.router.post('/password/', checkLogin, function (req, res, next) {
 		var uid = req.session.uid;
@@ -561,6 +560,46 @@ Bot.prototype.init = function(config) {
 				result.setResult(1);
 				result.setMessage('delete ' + d + ' files');
 				result.setData();
+			}
+			next();
+		});
+	});
+
+	// create album
+	this.router.post('/album/', function (req, res, next) {
+		var result = new Result();
+		res.result = result;
+		var bot = self.getBot('TagOperator');
+		var album = req.body;
+		album.uid = req.session.uid;
+		bot.createAlbum(album, function (e, d) {
+			if(e) {
+				result.setMessage(e.message);
+				result.setData(e);
+			}
+			else {
+				result.setResult(1);
+				result.setMessage('create album: ' + d.aid);
+				result.setData(d);
+			}
+			next();
+		});
+	});
+	// list album
+	this.router.get('/album/', function (req, res, next) {
+		var result = new Result();
+		res.result = result;
+		var uid = req.session.uid;
+		var bot = self.getBot('TagOperator');
+		bot.listAlbum(uid, function (e, d) {
+			if(e) {
+				result.setMessage(e.message);
+				result.setData(e);
+			}
+			else {
+				result.setResult(1);
+				result.setMessage('get album list');
+				result.setData(d);
 			}
 			next();
 		});
