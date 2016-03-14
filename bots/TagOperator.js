@@ -103,7 +103,7 @@ Bot.prototype.checkAlbumExists = function (uid, albums, cb) {
     cb(null, result);
   });
 };
-Bot.prototype.checkFileExists = function (files, cb) {
+Bot.prototype.checkFileExists = function (uid, files, cb) {
 	// Reserved word: 'offline:', 'tag:'
 	if(!Array.isArray(files)) { files = [files]; }
 	uid = dvalue.default(uid, 'default');
@@ -124,25 +124,41 @@ Bot.prototype.checkFileExists = function (files, cb) {
   });
 };
 
-Bot.prototype.assignTag = function (files, tags, remove, cb) {
+Bot.prototype.assignTag = function (uid, files, tags, remove, cb) {
 	if(!Array.isArray(files)) { files = [files]; }
 	if(!Array.isArray(tags)) { tags = [tags]; }
+	uid = dvalue.default(uid, 'default');
+	var addTag, removeTag, predone, done;
+	var cname = [uid, 'tags'].join('_');
 	var pretodo = 2;
-	var todo = 0;
+	var todo = 2;
 	var predone = function () {
-		if(--pretodo == 0) {  }
+		if(--pretodo == 0) {
+			addTag(_files, _tags, done);
+			if(remove) { removeTag(_files, _tags, done); }
+		}
 	};
 	var done = function () {
-
+		if(--done == 0) {
+			cb(null, {files: files, tags: tags})
+		}
 	};
 
-	this.checkTagExists(tags, function (e, d) {});
-	this.checkFileExists(files, function (e, d) {});
+	this.checkTagExists(tags, function (e, d) {
+		if(e) { return cb(e); }
+		tags = d;
+		predone();
+	});
+	this.checkFileExists(files, function (e, d) {
+		if(e) { return cb(e); }
+		files = d;
+		predone();
+	});
 
-	var addTag = function (_files, _tags, _cb) {
+	addTag = function (_files, _tags, _cb) {
 
 	};
-	var removeTag = function (_files, _tags, _cb) {
+	removeTag = function (_files, _tags, _cb) {
 
 	};
 };

@@ -605,6 +605,48 @@ Bot.prototype.init = function(config) {
 		});
 	});
 
+	// check files
+	this.router.post('/checkFiles/', function (req, res, next) {
+		var result = new Result();
+		res.result = result;
+		var uid = req.session.uid;
+		var bot = self.getBot('TagOperator');
+		var files = req.body;
+		bot.checkFileExists(uid, files, function (e, d) {
+			if(e) {
+				result.setMessage(e.message);
+				result.setData(e);
+			}
+			else {
+				result.setResult(1);
+				result.setMessage('check file exists');
+				result.setData(d);
+			}
+			next();
+		});
+	});
+
+	// check albums
+	this.router.post('/checkAlbums/', function (req, res, next) {
+		var result = new Result();
+		res.result = result;
+		var uid = req.session.uid;
+		var bot = self.getBot('TagOperator');
+		var albums = req.body;
+		bot.checkAlbumExists(uid, albums, function (e, d) {
+			if(e) {
+				result.setMessage(e.message);
+				result.setData(e);
+			}
+			else {
+				result.setResult(1);
+				result.setMessage('check album exists');
+				result.setData(d);
+			}
+			next();
+		});
+	});
+
 	// tracker
 	this.router.get('/node/:client', function (req, res, next) {
 		var tracker = self.getBot('tracker');
