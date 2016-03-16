@@ -208,84 +208,7 @@ Bot.prototype.listFilesByTag = function (uid, tag, cb) {
     cb(null, d);
   });
 };
-Bot.prototype.editTag = function (tag, cb) {
-	var uid = dvalue.default(tag.uid, 'default');
-	var _id = '';
-	try { _id = new mongodb.ObjectID(tag._id); } catch(e) {}
-	var cname = [uid, 'tags'].join('_');
-	var collection = this.db.collection(cname);
-	var set = {};
-	var pull = {};
-	var todo = 0;
-
-//++
-
-	var done = function () {
-		if(--todo == 0) {
-			collection.findAndModify(
-				{_id: fid, destroy: {$exists: false}},
-				{},
-				{$set: set},
-				{},
-				function (e, d) {
-					if(e) { return cb(e); }
-					else if(!d.lastErrorObject.updatedExisting) {
-						e = new Error("tag not found: " + tag._id);
-						e.code = 1;
-						return cb(e);
-					}
-					else {
-						return cb();
-					}
-				}
-			);
-		}
-	};
-
-	for(var k in tag) {
-		if(k.indexOf('$') == 0) { continue; }
-		set[k] = tag[k];
-	}
-
-	if(Array.isArray(tag['$add'])) {
-		todo++;
-	}
-	if(Array.isArray(tag['$remove'])) {
-
-	}
-	if(Array.isArray(tag.files)) {
-		this.checkFileExists(uid, tag.files, function (e, d) {
-			if(Array.isArray(d)) { set.files = d; }
-
-		});
-	}
-	else {
-
-	}
-
-
-	var newTag = {name: '', type: '', ctime: now};
-	for(var k in tag) {
-		if(k.indexOf('$') == 0) { continue; }
-		newTag[k] = tag[k];
-	}
-	if(newTag.files !== undefined) {
-		checkFileExists(uid, newTag.files, function (e, d) {
-			if(e) { return cb(e); }
-			newTag.files = d;
-			collection.insertOne(newTag, {}, function (_e, _d) {
-				if(_e) { return cb(_e); }
-				cb(null, newTag);
-			});
-		});
-	}
-	else {
-		collection.insertOne(newTag, {}, function (e, d) {
-			if(e) { return cb(e); }
-			cb(null, newTag);
-		});
-	}
-};
+Bot.prototype.editTag = function (tag, cb) {};
 Bot.prototype.deleteTag = function (tag, cb) {
 
 };
@@ -374,7 +297,116 @@ Bot.prototype.listFilesByAlbum = function (uid, album, cb) {
     cb(null, descAlbumFile(d));
   });
 };
-Bot.prototype.editAlbum = function () {};
+Bot.prototype.albumUpdate = function (uid, cond, updateQuery, cb) {
+	var uid = dvalue.default(uid, 'default');
+	var cname = [uid, 'tags'].join('_');
+	var collection = this.db.collection(cname);
+	collection.findAndModify(
+		cond,
+		{},
+		updateQuery,
+		{},
+		function (e, d) {
+			if(e) { return cb(e); }
+			else if(!d.lastErrorObject.updatedExisting) {
+				e = new Error("album not found: " + _id);
+				e.code = 1;
+				return cb(e);
+			}
+			else {
+				var rs = dvalue.clone(d.value);
+				return cb(descAlbumFile(rs));
+			}
+		}
+	);
+};
+Bot.prototype.albumAddFile = function (uid, cond, files, cb) {
+	var self = this;
+	var uid = dvalue.default(uid, 'default');
+	var cname = [uid, 'tags'].join('_');
+	var collection = this.db.collection(cname);
+	var updateQuery = {};
+	this.checkFileExists(uid, files, function (e, d) {
+		if(Array.isArray(d)) {
+			updateQuery['$addToSet'] = {files: {$each: d}};
+			self.albumUpdate(uid, cond, updateQuery, function (e1, d1) {
+				if(e1) { cb(e1); }
+				else { cb(null, d); }
+			});
+		}
+		else {
+			cb(e);
+		}
+	});
+};
+Bot.prototype.albumRemoveFile = function (uid, cond, files, cb) {
+	if(!Array.isArray(files)) { files = [files]; }
+	var uid = dvalue.default(uid, 'default');
+	var cname = [uid, 'tags'].join('_');
+	var collection = this.db.collection(cname);
+	var updateQuery = {$pull: {files: {$in: files}}}
+	this.albumUpdate(uid, cond, updateQuery, function (e, d) {
+			if(e) { cb(e); }
+			else { cb(null, d); }
+	});
+};
+Bot.prototype.albumSetCover = function (uid, cond, cover, cb) {
+	var self = this;
+	var files = [cover];
+	var updateQuery = {$set: {cover: cover}};
+	this.albumAddFile(uid, cond, files, function (e, d) {
+		if(e || !d) { cb(e); }
+		else {
+			self.albumUpdate(uid, cond, updateQuery);
+		}
+	});
+};
+Bot.prototype.editAlbum = function (album, cb) {
+	var uid = dvalue.default(album.uid, 'default');
+	var _id = '';
+	try { _id = new mongodb.ObjectID(album.aid); } catch(e) {}
+	var cname = [uid, 'tags'].join('_');
+	var collection = this.db.collection(cname);
+	var updateQuery = {};
+	var set = {};
+	var todo = 1;
+	updateQuery['$set'] = set;
+
+	delete album.aid;
+	delete album.uid;
+	for(var k in album) {
+		if(k.indexOf('$') == 0) { continue; }
+		set[k] = album[k];
+	}
+
+	if(Array.isArray(album.files)) {
+
+	}
+	else {
+
+	}
+
+	//
+	if(Array.isArray(album['$remove'])) {
+		updateQuery['$pull'] = {files: {$in: album['$remove']}};
+		console.log(updateQuery['$pull']);
+	}
+
+	if(Array.isArray(album['$add'])) {
+		todo++;
+		this.checkFileExists(uid, album['$add'], function (e, d) {
+			if(Array.isArray(d)) { updateQuery['$addToSet'] = {files: {$each: d}} }
+			done();
+		});
+	}
+	else if(Array.isArray(album.files)) {
+		this.checkFileExists(uid, album.files, function (e, d) {
+			if(Array.isArray(d)) { set.files = d; }
+			done();
+		});
+	}
+	done();
+};
 Bot.prototype.deleteAlbum = function () {};
 
 module.exports = Bot;

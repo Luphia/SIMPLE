@@ -605,7 +605,48 @@ Bot.prototype.init = function(config) {
 		});
 	});
 	// get album file
+	this.router.get('/album/:aid', function (req, res, next) {
+		var result = new Result();
+		res.result = result;
+		var uid = req.session.uid;
+		var aid = req.params.aid;
+		var bot = self.getBot('TagOperator');
+		bot.listFilesByAlbum(uid, aid, function (e, d) {
+			if(e) {
+				result.setMessage(e.message);
+				result.setData(e);
+			}
+			else {
+				result.setResult(1);
+				result.setMessage('get album: ' + aid);
+				result.setData(d);
+			}
+			next();
+		});
+	});
 	// edit album
+	this.router.put('/album/:aid', function (req, res, next) {
+		var result = new Result();
+		res.result = result;
+		var uid = req.session.uid;
+		var aid = req.params.aid;
+		var album = req.body;
+		album.aid = aid;
+		album.uid = uid;
+		var bot = self.getBot('TagOperator');
+		bot.editAlbum(album, function (e, d) {
+			if(e) {
+				result.setMessage(e.message);
+				result.setData(e);
+			}
+			else {
+				result.setResult(1);
+				result.setMessage('edit album: ' + aid);
+				result.setData(d);
+			}
+			next();
+		});
+	});
 	// delete album
 	// add to album
 
