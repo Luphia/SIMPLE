@@ -648,8 +648,66 @@ Bot.prototype.init = function(config) {
 		});
 	});
 	// delete album
+	this.router.delete('/album/:aid', function (req, res, next) {
+		var result = new Result();
+		res.result = result;
+		var uid = req.session.uid;
+		var aid = req.params.aid;
+		var bot = self.getBot('TagOperator');
+		bot.deleteAlbum(uid, aid, function (e, d) {
+			if(e) {
+				result.setMessage(e.message);
+				result.setData(e);
+			}
+			else {
+				result.setResult(1);
+				result.setMessage('delete album: ' + aid);
+			}
+			next();
+		});
+	});
 	// add to album
-
+	this.router.put('/addToAlbum/', function (req, res, next) {
+		var result = new Result();
+		res.result = result;
+		var uid = req.session.uid;
+		var files = req.body.files;
+		var albums = req.body.albums;
+		var bot = self.getBot('TagOperator');
+		bot.assignAlbum(uid, files, albums, false, function (e, d) {
+			if(e) {
+				result.setMessage(e.message);
+				result.setData(e);
+			}
+			else {
+				result.setResult(1);
+				result.setMessage('add files to albums');
+				result.setData(d);
+			}
+			next();
+		});
+	});
+	// /assign to album
+	this.router.put('/assignToAlbum/', function (req, res, next) {
+		var result = new Result();
+		res.result = result;
+		var uid = req.session.uid;
+		var files = req.body.files;
+		var albums = req.body.albums;
+		var bot = self.getBot('TagOperator');
+		bot.assignAlbum(uid, files, albums, true, function (e, d) {
+			if(e) {
+				result.setMessage(e.message);
+				result.setData(e);
+			}
+			else {
+				result.setResult(1);
+				result.setMessage('assign files to albums');
+				result.setData(d);
+			}
+			next();
+		});
+	});
 
 	// tracker
 	this.router.get('/node/:client', function (req, res, next) {
