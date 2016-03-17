@@ -147,12 +147,16 @@ Bot.prototype.assignTag = function (uid, files, tags, remove, cb) {
 	var addTag, removeTag, predone, done;
 	var cname = [uid, 'tags'].join('_');
 	var pretodo = 2;
-	var todo = 2;
+	var todo = 0;
 	var collection = this.db.collection(cname);
+	var tids = tags.map(function (v) {
+		try { v = new mongodb.ObjectID(v); } catch(e) {}
+		return v;
+	});
 	var predone = function () {
 		if(--pretodo == 0) {
-			addTag(_files, _tags, done);
-			if(remove) { removeTag(_files, _tags, done); }
+			addTag(files, tags, done);
+			if(remove) { removeTag(files, tags, done); }
 		}
 	};
 	var done = function () {
@@ -161,23 +165,23 @@ Bot.prototype.assignTag = function (uid, files, tags, remove, cb) {
 		}
 	};
 
-	this.checkTagExists(tags, function (e, d) {
+	this.checkTagExists(uid, tags, function (e, d) {
 		if(e) { return cb(e); }
 		tags = d;
 		predone();
 	});
-	this.checkFileExists(files, function (e, d) {
+	this.checkFileExists(uid, files, function (e, d) {
 		if(e) { return cb(e); }
 		files = d;
 		predone();
 	});
 
 	addTag = function (_files, _tags, _cb) {
-		collection.findAndModify(
-			{_id: {$in: _tags}},
-			{},
+		todo++;
+		collection.update(
+			{_id: {$in: tids}},
 			{$addToSet: {files: {$each: _files}}},
-			{},
+			{multi: true},
 			function (e, d) {
 				if(e) { return cb(e); }
 				else { done(); }
@@ -185,11 +189,11 @@ Bot.prototype.assignTag = function (uid, files, tags, remove, cb) {
 		);
 	};
 	removeTag = function (_files, _tags, _cb) {
-		collection.findAndModify(
-			{_id: {$nin: _tags}},
-			{},
+		todo++;
+		collection.update(
+			{_id: {$nin: tids}},
 			{$pull: {files: {$in: _files}}},
-			{},
+			{multi: true},
 			function (e, d) {
 				if(e) { return cb(e); }
 				else { done(); }
@@ -236,37 +240,41 @@ Bot.prototype.assignAlbum = function (uid, files, tags, remove, cb) {
 	var addTag, removeTag, predone, done;
 	var cname = [uid, 'tags'].join('_');
 	var pretodo = 2;
-	var todo = 2;
+	var todo = 0;
 	var collection = this.db.collection(cname);
+	var tids = tags.map(function (v) {
+		try { v = new mongodb.ObjectID(v); } catch(e) {}
+		return v;
+	});
 	var predone = function () {
 		if(--pretodo == 0) {
-			addTag(_files, _tags, done);
-			if(remove) { removeTag(_files, _tags, done); }
+			addTag(files, tags, done);
+			if(remove) { removeTag(files, tags, done); }
 		}
 	};
 	var done = function () {
-		if(--done == 0) {
-			cb(null, {files: files, tags: tags})
+		if(--todo == 0) {
+			cb(null, {files: files, albums: tags})
 		}
 	};
 
-	this.checkTagExists(tags, function (e, d) {
+	this.checkTagExists(uid, tags, function (e, d) {
 		if(e) { return cb(e); }
 		tags = d;
 		predone();
 	});
-	this.checkFileExists(files, function (e, d) {
+	this.checkFileExists(uid, files, function (e, d) {
 		if(e) { return cb(e); }
 		files = d;
 		predone();
 	});
 
 	addTag = function (_files, _tags, _cb) {
-		collection.findAndModify(
-			{_id: {$in: _tags}, type: 'album'},
-			{},
+		todo++;
+		collection.update(
+			{_id: {$in: tids}, type: 'album'},
 			{$addToSet: {files: {$each: _files}}},
-			{},
+			{multi: true},
 			function (e, d) {
 				if(e) { return cb(e); }
 				else { done(); }
@@ -274,11 +282,11 @@ Bot.prototype.assignAlbum = function (uid, files, tags, remove, cb) {
 		);
 	};
 	removeTag = function (_files, _tags, _cb) {
-		collection.findAndModify(
-			{_id: {$nin: _tags}, type: 'album'},
-			{},
+		todo++;
+		collection.update(
+			{_id: {$nin: tids}, type: 'album'},
 			{$pull: {files: {$in: _files}}},
-			{},
+			{multi: true},
 			function (e, d) {
 				if(e) { return cb(e); }
 				else { done(); }
@@ -286,14 +294,18 @@ Bot.prototype.assignAlbum = function (uid, files, tags, remove, cb) {
 		);
 	};
 };
-Bot.prototype.listFilesByAlbum = function (uid, album, cb) {
+Bot.prototype.listFilesByAlbum = function (uid, aid, cb) {
 	uid = dvalue.default(uid, 'default');
-	var aid = '';
-	try { aid = new mongodb.ObjectID(album); } catch(e) {}
+	try { aid = new mongodb.ObjectID(aid); } catch(e) {}
 	var cname = [uid, 'tags'].join('_');
 	var collection = this.db.collection(cname);
 	collection.findOne({_id: aid, destroy: {$exists: false}}, {}, function (e, d) {
     if(e) { return cb(e); }
+		else if(!d) {
+			e = new Error("album not found: " + aid);
+			e.code = 1;
+			return cb(e);
+		}
     cb(null, descAlbumFile(d));
   });
 };
@@ -309,13 +321,13 @@ Bot.prototype.albumUpdate = function (uid, cond, updateQuery, cb) {
 		function (e, d) {
 			if(e) { return cb(e); }
 			else if(!d.lastErrorObject.updatedExisting) {
-				e = new Error("album not found: " + _id);
+				e = new Error("album not found");
 				e.code = 1;
 				return cb(e);
 			}
 			else {
 				var rs = dvalue.clone(d.value);
-				return cb(descAlbumFile(rs));
+				return cb(null, descAlbumFile(rs));
 			}
 		}
 	);
@@ -340,6 +352,7 @@ Bot.prototype.albumAddFile = function (uid, cond, files, cb) {
 	});
 };
 Bot.prototype.albumRemoveFile = function (uid, cond, files, cb) {
+	console.log('albumRemoveFile', uid, cond, files);
 	if(!Array.isArray(files)) { files = [files]; }
 	var uid = dvalue.default(uid, 'default');
 	var cname = [uid, 'tags'].join('_');
@@ -362,15 +375,26 @@ Bot.prototype.albumSetCover = function (uid, cond, cover, cb) {
 	});
 };
 Bot.prototype.editAlbum = function (album, cb) {
+	var self = this;
 	var uid = dvalue.default(album.uid, 'default');
 	var _id = '';
 	try { _id = new mongodb.ObjectID(album.aid); } catch(e) {}
 	var cname = [uid, 'tags'].join('_');
 	var collection = this.db.collection(cname);
-	var updateQuery = {};
+	var cond;
+	var updateQuery;
 	var set = {};
 	var todo = 1;
-	updateQuery['$set'] = set;
+	var rs;
+	var err;
+	var done = function (e, d) {
+		rs = d;
+		err = e? e: err;
+		if(--todo == 0) {
+			if(rs) { cb(null, d); }
+			else { cb(err, rs); }
+		}
+	};
 
 	delete album.aid;
 	delete album.uid;
@@ -379,34 +403,42 @@ Bot.prototype.editAlbum = function (album, cb) {
 		set[k] = album[k];
 	}
 
-	if(Array.isArray(album.files)) {
-
-	}
-	else {
-
-	}
-
-	//
-	if(Array.isArray(album['$remove'])) {
-		updateQuery['$pull'] = {files: {$in: album['$remove']}};
-		console.log(updateQuery['$pull']);
-	}
-
-	if(Array.isArray(album['$add'])) {
-		todo++;
-		this.checkFileExists(uid, album['$add'], function (e, d) {
-			if(Array.isArray(d)) { updateQuery['$addToSet'] = {files: {$each: d}} }
-			done();
-		});
-	}
-	else if(Array.isArray(album.files)) {
-		this.checkFileExists(uid, album.files, function (e, d) {
-			if(Array.isArray(d)) { set.files = d; }
-			done();
-		});
-	}
-	done();
+	cond = {_id: _id, type: 'album', destroy: {$exists: false}};
+	updateQuery = {$set: set};
+	this.albumUpdate(uid, cond, updateQuery, function (e, d) {
+		var albumResult = descAlbumFile(d);
+		albumResult.aid = _id;
+		if(Array.isArray(album['$add'])) {
+			todo++;
+			self.albumAddFile(uid, cond, album['$add'], function (e1, d1) {
+				if(Array.isArray(d1)) { d1.map(function (v) {
+					var tmpi =  albumResult.files.indexOf(v);
+					if(tmpi == -1) { albumResult.files.push(v); }
+				}); }
+				cb(null, albumResult);
+			});
+		}
+		if(Array.isArray(album['$remove'])) {
+			todo++;
+			self.albumRemoveFile(uid, cond, album['$remove'], function (e1, d1) {
+				if(Array.isArray(d1)) { d1.map(function (v) {
+					var tmpi =  albumResult.files.indexOf(v);
+					if(tmpi > -1) { albumResult.files.splice(tmpi, 1); }
+				}); }
+				cb(null, albumResult);
+			});
+		}
+		done(e, d);
+	});
 };
-Bot.prototype.deleteAlbum = function () {};
+Bot.prototype.deleteAlbum = function (uid, aid, cb) {
+	var now = new Date().getTime();
+	var uid = dvalue.default(uid, 'default');
+	var _id = '';
+	try { _id = new mongodb.ObjectID(aid); } catch(e) {}
+	var cond = {_id: _id, type: 'album', destroy: {$exists: false}};
+	var updateQuery = {$set: {destroy: now}};
+	this.albumUpdate(uid, cond, updateQuery, cb);
+};
 
 module.exports = Bot;
