@@ -566,7 +566,7 @@ Bot.prototype.init = function(config) {
 	});
 
 	// create album
-	this.router.post('/album/', function (req, res, next) {
+	this.router.post('/album/', checkLogin, function (req, res, next) {
 		var result = new Result();
 		res.result = result;
 		var bot = self.getBot('TagOperator');
@@ -586,7 +586,7 @@ Bot.prototype.init = function(config) {
 		});
 	});
 	// get album list
-	this.router.get('/album/', function (req, res, next) {
+	this.router.get('/album/', checkLogin, function (req, res, next) {
 		var result = new Result();
 		res.result = result;
 		var uid = req.session.uid;
@@ -605,7 +605,7 @@ Bot.prototype.init = function(config) {
 		});
 	});
 	// get album file
-	this.router.get('/album/:aid', function (req, res, next) {
+	this.router.get('/album/:aid', checkLogin, function (req, res, next) {
 		var result = new Result();
 		res.result = result;
 		var uid = req.session.uid;
@@ -625,7 +625,7 @@ Bot.prototype.init = function(config) {
 		});
 	});
 	// edit album
-	this.router.put('/album/:aid', function (req, res, next) {
+	this.router.put('/album/:aid', checkLogin, function (req, res, next) {
 		var result = new Result();
 		res.result = result;
 		var uid = req.session.uid;
@@ -648,7 +648,7 @@ Bot.prototype.init = function(config) {
 		});
 	});
 	// delete album
-	this.router.delete('/album/:aid', function (req, res, next) {
+	this.router.delete('/album/:aid', checkLogin, function (req, res, next) {
 		var result = new Result();
 		res.result = result;
 		var uid = req.session.uid;
@@ -667,7 +667,7 @@ Bot.prototype.init = function(config) {
 		});
 	});
 	// add to album
-	this.router.put('/addToAlbum/', function (req, res, next) {
+	this.router.put('/addToAlbum/', checkLogin, function (req, res, next) {
 		var result = new Result();
 		res.result = result;
 		var uid = req.session.uid;
@@ -688,7 +688,7 @@ Bot.prototype.init = function(config) {
 		});
 	});
 	// /assign to album
-	this.router.put('/assignToAlbum/', function (req, res, next) {
+	this.router.put('/assignToAlbum/', checkLogin, function (req, res, next) {
 		var result = new Result();
 		res.result = result;
 		var uid = req.session.uid;
