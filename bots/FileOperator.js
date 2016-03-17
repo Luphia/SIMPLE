@@ -139,7 +139,12 @@ Bot.prototype.getFile = function (file, cb) {
   this.getMetadata(file, function (e, meta) {
     if(e) { return cb(e); }
     fs.readFile(filepath, function (e1, buffer) {
-      if(e) { return cb(e1); }
+      if(e1) { return cb(e1); }
+      if(!buffer) {
+      	e1 = new Error("file not found: " + file.fid);
+      	e1.code = 1;
+      	return cb(e1);
+      }
       buffer.mimetype = meta.mimetype;
       cb(null, buffer);
     });
