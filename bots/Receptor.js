@@ -878,7 +878,7 @@ Bot.prototype.filter = function (req, res, next) {
 	res.header('Client-ID', this.config.UUID);
   res.header("Access-Control-Allow-Origin", "*");
 	res.header("Access-Control-Allow-Methods", "GET, PUT, POST, DELETE, OPTIONS");
-	res.header("Access-Control-Allow-Headers", "Hashcash");
+	res.header("Access-Control-Allow-Headers", "Hashcash", "Authorization");
 	next();
 };
 
