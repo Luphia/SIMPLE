@@ -440,5 +440,30 @@ Bot.prototype.deleteAlbum = function (uid, aid, cb) {
 	var updateQuery = {$set: {destroy: now}};
 	this.albumUpdate(uid, cond, updateQuery, cb);
 };
+Bot.prototype.deleteAlbums = function (uid, aid, cb) {
+	var now = new Date().getTime();
+	var uid = dvalue.default(uid, 'default');
+	if(!Array.isArray(aid)) { aid = [aid]; }
+	aid = aid.map(function (v) {
+		try { return new mongodb.ObjectID(v); } catch(e) {}
+	});
+	var cond = {_id: {$in: aid}, type: 'album', destroy: {$exists: false}};
+	var updateQuery = {$set: {destroy: now}};
+	var cname = [uid, 'tags'].join('_');
+	var collection = this.db.collection(cname);
+	collection.update(
+		cond,
+		updateQuery,
+		{multi: true},
+		function (e, d) {
+			var n;
+			if(e) { return cb(e); }
+			else {
+				try { n = d.result.nModified; } catch(e) { n = 0; }
+				return cb(null, n);
+			}
+		}
+	);
+};
 
 module.exports = Bot;

@@ -543,7 +543,7 @@ Bot.prototype.init = function(config) {
 		});
 	});
 	// delete files
-	this.router.put('/delete/', checkLogin, function (req, res, next) {
+	this.router.put('/delete/files', checkLogin, function (req, res, next) {
 		var result = new Result();
 		res.result = result;
 		var bot = self.getBot('FileOperator');
@@ -558,7 +558,7 @@ Bot.prototype.init = function(config) {
 			}
 			else {
 				result.setResult(1);
-				result.setMessage('delete ' + d + ' files');
+				result.setMessage('delete ' + d + ' file');
 				result.setData();
 			}
 			next();
@@ -662,6 +662,26 @@ Bot.prototype.init = function(config) {
 			else {
 				result.setResult(1);
 				result.setMessage('delete album: ' + aid);
+			}
+			next();
+		});
+	});
+	// delete albums
+	this.router.put('/delete/albums', checkLogin, function (req, res, next) {
+		var result = new Result();
+		res.result = result;
+		var bot = self.getBot('TagOperator');
+		var uid = req.session.uid;
+		var aid = req.body;
+		bot.deleteAlbums(uid, aid, function (e, d) {
+			if(e) {
+				result.setMessage(e.message);
+				result.setData(e);
+			}
+			else {
+				result.setResult(1);
+				result.setMessage('delete ' + d + ' album');
+				result.setData();
 			}
 			next();
 		});
