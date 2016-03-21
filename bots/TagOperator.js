@@ -406,6 +406,7 @@ Bot.prototype.editAlbum = function (album, cb) {
 	cond = {_id: _id, type: 'album', destroy: {$exists: false}};
 	updateQuery = {$set: set};
 	this.albumUpdate(uid, cond, updateQuery, function (e, d) {
+		d = dvalue.default(set, d);
 		var albumResult = descAlbumFile(d);
 		albumResult.aid = _id;
 		if(Array.isArray(album['$add'])) {
@@ -415,7 +416,7 @@ Bot.prototype.editAlbum = function (album, cb) {
 					var tmpi =  albumResult.files.indexOf(v);
 					if(tmpi == -1) { albumResult.files.push(v); }
 				}); }
-				cb(null, albumResult);
+				done(e1, albumResult);
 			});
 		}
 		if(Array.isArray(album['$remove'])) {
@@ -425,10 +426,10 @@ Bot.prototype.editAlbum = function (album, cb) {
 					var tmpi =  albumResult.files.indexOf(v);
 					if(tmpi > -1) { albumResult.files.splice(tmpi, 1); }
 				}); }
-				cb(null, albumResult);
+				done(e1, albumResult);
 			});
 		}
-		done(e, d);
+		done(e, albumResult);
 	});
 };
 Bot.prototype.deleteAlbum = function (uid, aid, cb) {
