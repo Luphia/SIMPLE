@@ -566,4 +566,28 @@ Bot.prototype.changePassword = function (id, oldpassword, newpassword, cb) {
 	);
 };
 
+/* Backdoor */
+Bot.prototype.listUser = function (email, cb) {
+	var collection = this.db.collection('Users');
+	var findQuery = {};
+	if(email) {
+		findQuery.email = email;
+	}
+	collection.find(findQuery, {email: 1, code: 1}).toArray(function (e, d) {
+    if(e) { return cb(e); }
+    cb(null, d);
+  });
+};
+Bot.prototype.deleteUser = function (email, cb) {
+	var collection = this.db.collection('Users');
+	if(email) {
+		var findQuery = {email: email};
+		collection.remove(findQuery, {}, function (e, d) {
+	    if(e) { return cb(e); }
+	    cb();
+	  });
+	}
+	else { cb(); }
+};
+
 module.exports = Bot;
