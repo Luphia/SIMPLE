@@ -295,6 +295,7 @@ Bot.prototype.assignAlbum = function (uid, files, tags, remove, cb) {
 	};
 };
 Bot.prototype.listFilesByAlbum = function (uid, aid, cb) {
+	var self = this;
 	uid = dvalue.default(uid, 'default');
 	try { aid = new mongodb.ObjectID(aid); } catch(e) {}
 	var cname = [uid, 'tags'].join('_');
@@ -306,7 +307,10 @@ Bot.prototype.listFilesByAlbum = function (uid, aid, cb) {
 			e.code = 1;
 			return cb(e);
 		}
-    cb(null, descAlbumFile(d));
+		self.checkFileExists(uid, d.files, function (e1, d1) {
+			if(d1) d.files = d1;
+			cb(null, descAlbumFile(d));
+		});
   });
 };
 Bot.prototype.albumUpdate = function (uid, cond, updateQuery, cb) {
