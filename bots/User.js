@@ -496,9 +496,8 @@ Bot.prototype.resetPassword = function (email, cb) {
 		collection.findOne({email: email}, {}, function (e, user) {
 			if(e) { return cb(e); }
 			else if(!user) {
-				e = new Error("email not found");
+				e = new Error("email not found: " + email);
 				e.code = 3;
-				e.uid = user._id.toString();
 				return cb(e);
 			}
 			else if(!user.key) {
