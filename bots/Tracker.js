@@ -4,6 +4,7 @@ const http = require('http');
 const url = require('url');
 const BorgRing = require('borg-ring');
 const dvalue = require('dvalue');
+const mongodb = require('mongodb');
 const Result = require('../classes/Result.js');
 
 var nodeEncode = function(node) {
@@ -112,6 +113,7 @@ Bot.prototype.exec = function(msg, callback) {
 				if(typeof callback == 'function') { callback(false, rs.toJSON()); }
 			}
 			else {
+				var rs = new Result();
 				rs.setResult(1);
 				rs.setMessage('fetch nodes');
 				rs.setData(this.findNode());
@@ -196,8 +198,11 @@ Bot.prototype.testNode = function (node, callback) {
 };
 Bot.prototype.pushMachine = function (owner) {
 	var self = this;
-	this.ecdb.listData('nodes', "owner='" + owner + "'", function(e, d) {
-		if(e || d.length == 0) { return false; }
+	var cname = ['SIMPLE', 'nodes'].join('_');
+	var collection = this.db.collection(cname);
+	findQuery = {owner: owner};
+	collection.find(findQuery, {}).toArray(function (e, d) {
+		if(e) { return false; }
 		var list = nodeEncode(d);
 		var dataString = JSON.stringify(list);
 		d.map(function (v, k) {
@@ -226,8 +231,10 @@ Bot.prototype.pushMachine = function (owner) {
 };
 Bot.prototype.loadNode = function () {
 	var self = this;
-
-	this.ecdb.listData('nodes', {}, function(e, d) {
+	var cname = ['SIMPLE', 'nodes'].join('_');
+	var collection = this.db.collection(cname);
+	findQuery = {};
+	collection.find(findQuery, {}).toArray(function (e, d) {
 		self.nodes = d;
 		for(var k in d) {
 			self.nodeIndex[ d[k].client ] = k;
@@ -235,6 +242,8 @@ Bot.prototype.loadNode = function () {
 	});
 };
 Bot.prototype.addNode = function(node) {
+	var cname = ['SIMPLE', 'nodes'].join('_');
+	var collection = this.db.collection(cname);
 	var result = new Result();
 	var format = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -244,7 +253,8 @@ Bot.prototype.addNode = function(node) {
 		result.setMessage('add node: ' + node.client);
 
 		// write db
-		this.ecdb.postData('nodes', node, function(e, d) { node._id = d; });
+		node._id = new mongodb.ObjectID().toString();
+		collection.insert(node, {}, function (e, d) {});
 	}
 	else {
 		result.setResult(0);
@@ -265,7 +275,10 @@ Bot.prototype.removeNode = function (node) {
 	if(index > -1) {
 		this.nodes.splice(index, 1);
 		this.buildIndex;
-		this.ecdb.deleteData('nodes', "client = '" + node + "'", function(e, d) { node._id = d; });
+
+		var cname = ['SIMPLE', 'nodes'].join('_');
+		var collection = this.db.collection(cname);
+		collection.deleteOne({client: node}, function(e, d) {});
 	}
 };
 Bot.prototype.updateNode = function(node) {
@@ -292,7 +305,16 @@ Bot.prototype.updateNode = function(node) {
 
 		if(dirty) {
 			// write db
-			this.ecdb.putData('nodes', this.nodes[ this.nodeIndex[node.client] ]._id, node, function() {});
+			var cname = ['SIMPLE', 'nodes'].join('_');
+			var collection = this.db.collection(cname);
+			findQuery = {_id: this.nodes[ this.nodeIndex[node.client] ]._id};
+			collection.findAndModify(
+				findQuery,
+				{},
+				{$set: node},
+				{},
+				function (e, d) {}
+			);
 		}
 	}
 	else {
