@@ -136,9 +136,8 @@ util.inherits(Bot, ParentBot);
 Bot.prototype.init = function(config) {
 	var self = this;
 	Bot.super_.prototype.init.call(this, config);
-	var self = this;
-	this.serverPort = [5566, 80];
-	this.httpsPort = [7788, 443];
+	this.serverPort = [5566];
+	this.httpsPort = [7788];
 	this.nodes = [];
 	this.monitorData = {};
 	this.monitorData.traffic = {in: 0, out: 0};
@@ -178,7 +177,7 @@ Bot.prototype.init = function(config) {
 		this.https.on('error', function(err) {
 			if(err.syscall == 'listen') {
 				var nextPort = self.httpsPort.pop() || self.listeningHttps + 1;
-				self.startServer(nextPort);
+				self.startServer(null, nextPort);
 			}
 			else {
 				throw err;
@@ -846,13 +845,15 @@ Bot.prototype.start = function(cb) {
 };
 
 Bot.prototype.startServer = function(port, httpsPort, cb) {
-	this.listening = port;
-	this.listeningHttps = httpsPort;
-	this.http.listen(port, function() {
-			if(typeof(cb) == 'function') { cb(); }
-	});
+	if(port > 0) {
+		this.listening = port;
+		this.http.listen(port, function() {
+				if(typeof(cb) == 'function') { cb(); }
+		});
+	}
 
-	if(this.pfx) {
+	if(httpsPort > 0 && this.pfx) {
+		this.listeningHttps = httpsPort;
 		this.https.listen(httpsPort, function() {});
 	}
 }

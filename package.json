@@ -31,6 +31,7 @@
     "echashcash": "^1.0.1",
     "express": "^4.13.3",
     "express-session": "^1.13.0",
+    "http-proxy": "^1.13.2",
     "kerberos": "0.0.18",
     "log4js": "^0.6.29",
     "mime": "^1.3.4",
