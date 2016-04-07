@@ -76,11 +76,9 @@ errorHandler = function (err, req, res, next) {
 	res.json({result: 0, message: 'oops, something wrong...'});
 };
 returnData = function(req, res, next) {
-	var result = res.result
-	,	session;
+	var result = res.result, session;
 
 	if(result) {
-
 		if(typeof(result.getSession) == 'function') {
 			session = result.getSession();
 
@@ -124,7 +122,8 @@ returnData = function(req, res, next) {
 		res.send(result);
 	}
 
-	logger.info.info(req.method, req.url, result.attr.result, req.session.ip);
+	var rs = result.attr.data.code? [result.attr.result, result.attr.data.code].join(':'): result.attr.result;
+	logger.info.info(req.method, req.url, rs, req.session.ip);
 };
 
 var Bot = function(config) {
@@ -136,9 +135,8 @@ util.inherits(Bot, ParentBot);
 Bot.prototype.init = function(config) {
 	var self = this;
 	Bot.super_.prototype.init.call(this, config);
-	var self = this;
-	this.serverPort = [5566, 80];
-	this.httpsPort = [7788, 443];
+	this.serverPort = [5566];
+	this.httpsPort = [7788];
 	this.nodes = [];
 	this.monitorData = {};
 	this.monitorData.traffic = {in: 0, out: 0};
@@ -178,7 +176,7 @@ Bot.prototype.init = function(config) {
 		this.https.on('error', function(err) {
 			if(err.syscall == 'listen') {
 				var nextPort = self.httpsPort.pop() || self.listeningHttps + 1;
-				self.startServer(nextPort);
+				self.startServer(null, nextPort);
 			}
 			else {
 				throw err;
@@ -438,6 +436,7 @@ Bot.prototype.init = function(config) {
 	// get file list
 	this.router.get('/file/', checkLogin, function (req, res, next) {
 		var result = new Result();
+		var query = req.query;
 		res.result = result;
 		var bot = self.getBot('FileOperator');
 		var user = dvalue.default(req.user, {});
@@ -846,13 +845,15 @@ Bot.prototype.start = function(cb) {
 };
 
 Bot.prototype.startServer = function(port, httpsPort, cb) {
-	this.listening = port;
-	this.listeningHttps = httpsPort;
-	this.http.listen(port, function() {
-			if(typeof(cb) == 'function') { cb(); }
-	});
+	if(port > 0) {
+		this.listening = port;
+		this.http.listen(port, function() {
+				if(typeof(cb) == 'function') { cb(); }
+		});
+	}
 
-	if(this.pfx) {
+	if(httpsPort > 0 && this.pfx) {
+		this.listeningHttps = httpsPort;
 		this.https.listen(httpsPort, function() {});
 	}
 }

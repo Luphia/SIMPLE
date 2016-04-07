@@ -491,22 +491,22 @@ Bot.prototype.logout = function (token, cb) {
 /* require: email */
 Bot.prototype.resetPassword = function (email, cb) {
 	var self = this;
-	if(this.addMailHistory(email)) {
-		var collection = this.db.collection('Users');
-		collection.findOne({email: email}, {}, function (e, user) {
-			if(e) { return cb(e); }
-			else if(!user) {
-				e = new Error("email not found: " + email);
-				e.code = 3;
-				return cb(e);
-			}
-			else if(!user.key) {
-				e = new Error("Need to verify email address");
-				e.code = 1;
-				e.uid = user._id.toString();
-				return cb(e);
-			}
-			else {
+	var collection = this.db.collection('Users');
+	collection.findOne({email: email}, {}, function (e, user) {
+		if(e) { return cb(e); }
+		else if(!user) {
+			e = new Error("email not found: " + email);
+			e.code = 3;
+			return cb(e);
+		}
+		else if(!user.key) {
+			e = new Error("Need to verify email address");
+			e.code = 1;
+			e.uid = user._id.toString();
+			return cb(e);
+		}
+		else {
+			if(this.addMailHistory(email)) {
 				var bot = self.getBot("Mailer");
 				var password = dvalue.randomID(12);
 				var encPassword = crypto.createHash('md5').update(password).update(':iSunCloud').digest('hex');
@@ -527,13 +527,13 @@ Bot.prototype.resetPassword = function (email, cb) {
 					}
 				);
 			}
-		});
-	}
-	else {
-		var e = new Error("You have reached a limit for sending email: " + email);
-		e.code = 2;
-		return cb(e);
-	}
+			else {
+				var e = new Error("You have reached a limit for sending email: " + email);
+				e.code = 2;
+				return cb(e);
+			}
+		}
+	});
 };
 
 Bot.prototype.revertPassword = function (uid, code, cb) {
