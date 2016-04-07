@@ -76,11 +76,9 @@ errorHandler = function (err, req, res, next) {
 	res.json({result: 0, message: 'oops, something wrong...'});
 };
 returnData = function(req, res, next) {
-	var result = res.result
-	,	session;
+	var result = res.result, session;
 
 	if(result) {
-
 		if(typeof(result.getSession) == 'function') {
 			session = result.getSession();
 
@@ -124,7 +122,8 @@ returnData = function(req, res, next) {
 		res.send(result);
 	}
 
-	logger.info.info(req.method, req.url, result.attr.result, req.session.ip);
+	var rs = result.attr.data.code? [result.attr.result, result.attr.data.code].join(':'): result.attr.result;
+	logger.info.info(req.method, req.url, rs, req.session.ip);
 };
 
 var Bot = function(config) {
@@ -437,6 +436,7 @@ Bot.prototype.init = function(config) {
 	// get file list
 	this.router.get('/file/', checkLogin, function (req, res, next) {
 		var result = new Result();
+		var query = req.query;
 		res.result = result;
 		var bot = self.getBot('FileOperator');
 		var user = dvalue.default(req.user, {});

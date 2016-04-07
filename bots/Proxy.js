@@ -100,16 +100,14 @@ Bot.prototype.forward = function (req, res) {
 	var subdomain = host.match(/^[a-zA-Z0-9]+./);
 	var bot = this.getBot('Receptor');
 	var port = bot.listening || 5566;
+	var options = {};
 	if(textype.isPublicIP(host) || subdomain === null) {
-		this.proxy.web(req, res, {
-			target: 'http://127.0.0.1:' + port
-		});
+		options.target = 'http://127.0.0.1:' + port;
 	}
 	else {
-		this.proxy.web(req, res, {
-			target: 'http://1.160.28.168:53211'
-		});
+		options.target = 'http://127.0.0.1:' + port;
 	}
+	this.proxy.web(req, res, options);
 };
 
 module.exports = Bot;
