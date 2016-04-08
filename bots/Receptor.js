@@ -122,6 +122,7 @@ returnData = function(req, res, next) {
 		res.send(result);
 	}
 
+	result.attr.data = dvalue.default(result.attr.data, {});
 	var rs = result.attr.data.code? [result.attr.result, result.attr.data.code].join(':'): result.attr.result;
 	logger.info.info(req.method, req.url, rs, req.session.ip);
 };
