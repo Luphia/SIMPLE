@@ -356,7 +356,6 @@ Bot.prototype.albumAddFile = function (uid, cond, files, cb) {
 	});
 };
 Bot.prototype.albumRemoveFile = function (uid, cond, files, cb) {
-	console.log('albumRemoveFile', uid, cond, files);
 	if(!Array.isArray(files)) { files = [files]; }
 	var uid = dvalue.default(uid, 'default');
 	var cname = [uid, 'tags'].join('_');
