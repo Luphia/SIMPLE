@@ -506,7 +506,7 @@ Bot.prototype.resetPassword = function (email, cb) {
 			return cb(e);
 		}
 		else {
-			if(this.addMailHistory(email)) {
+			if(self.addMailHistory(email)) {
 				var bot = self.getBot("Mailer");
 				var password = dvalue.randomID(12);
 				var encPassword = crypto.createHash('md5').update(password).update(':iSunCloud').digest('hex');
