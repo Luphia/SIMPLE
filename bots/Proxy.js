@@ -101,11 +101,12 @@ Bot.prototype.forward = function (req, res) {
 	var bot = this.getBot('Receptor');
 	var port = bot.listening || 5566;
 	var options = {};
-	if(textype.isPublicIP(host) || subdomain === null) {
-		options.target = 'http://127.0.0.1:' + port;
-	}
+	options.target = 'http://127.0.0.1:' + port;
+	if(textype.isPublicIP(host) || subdomain === null) {}
 	else {
-		options.target = 'http://127.0.0.1:' + port;
+		var tracker = this.getBot('Tracker');
+		var opt = {domain: subdomain};
+		options.target = tracker.proxy(opt) || options.target;
 	}
 	this.proxy.web(req, res, options);
 };

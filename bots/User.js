@@ -272,7 +272,7 @@ Bot.prototype.register = function (email, password, cb) {
 	collection.findOne({email: email, key: {$exists: true}}, {}, function (e, d) {
 		if(e) { return cb(e); }
 		else if(!!d) {
-			e = new Error("Exist account");
+			e = new Error("existing account");
 			e.code = 2;
 			return cb(e);
 		}
