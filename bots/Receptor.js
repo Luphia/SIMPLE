@@ -729,6 +729,25 @@ Bot.prototype.init = function(config) {
 		});
 	});
 
+	// subdomain register
+	this.router.post('/subdomain/', function (req, res, next) {
+		var result = new Result();
+		var bot = self.getBot('tracker');
+		res.result = result;
+		bot.domainRegister(req.body, function (e, d) {
+			if(e) {
+				result.setMessage(e.message);
+				result.setData(e);
+			}
+			else {
+				result.setResult(1);
+				result.setMessage('create subdomain');
+				result.setData(d);
+			}
+			next();
+		});
+	});
+
 	// tracker
 	this.router.get('/node/:client', function (req, res, next) {
 		var tracker = self.getBot('tracker');

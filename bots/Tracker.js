@@ -7,6 +7,8 @@ const dvalue = require('dvalue');
 const mongodb = require('mongodb');
 const Result = require('../classes/Result.js');
 
+var period = 86400000 * 7;
+
 var nodeEncode = function(node) {
 	node = node || {};
 	var rs;
@@ -47,6 +49,8 @@ var Bot = function (config) {
 	this.init(config);
 	this.nodes = [];
 	this.nodeIndex = {};
+	this.subdomain = [];
+	this.subdomainIndex = {};
 };
 
 util.inherits(Bot, ParentBot);
@@ -54,6 +58,7 @@ util.inherits(Bot, ParentBot);
 Bot.prototype.start = function() {
 	Bot.super_.prototype.start.apply(this);
 	this.loadNode();
+	this.loadSubdomain();
 };
 
 Bot.prototype.exec = function(msg, callback) {
@@ -172,6 +177,7 @@ Bot.prototype.testNode = function (node, callback) {
 		var result = "";
 
 		res.on('error', function(e) {
+			callback(e);
 			console.log("Got error: " + e.message);
 		});
 
@@ -238,6 +244,18 @@ Bot.prototype.loadNode = function () {
 		self.nodes = d;
 		for(var k in d) {
 			self.nodeIndex[ d[k].client ] = k;
+		}
+	});
+};
+Bot.prototype.loadSubdomain = function () {
+	var self = this;
+	var cname = ['SIMPLE', 'subdomain'].join('_');
+	var collection = this.db.collection(cname);
+	findQuery = {};
+	collection.find(findQuery, {}).toArray(function (e, d) {
+		self.subdomain = d;
+		for(var k in d) {
+			self.subdomainIndex[ d[k].domain ] = k;
 		}
 	});
 };
@@ -341,6 +359,91 @@ Bot.prototype.getBorgRing = function() {
 };
 Bot.prototype.exist = function(node) {
 	return (this.nodeIndex[node.client] >= 0);
+};
+
+Bot.prototype.domainRegister = function (options, cb) {
+	var index;
+	var now = new Date().getTime();
+	options = dvalue.default(options, {
+		UUID: undefined,
+		domain: undefined,
+		ip: undefined,
+		port: undefined
+	});
+	index = this.subdomainIndex[options.domain] || -1;
+
+	if(index > -1) {
+		// domain exists - check key
+		var record = this.subdomain[index];
+		if(record.UUID != options.UUID && record.expire > now) {
+			var e = new Error('Existing subdomain');
+			e.code = 2;
+			return cb(e);
+		}
+	}
+
+	return this.assignDomain(options, cb);
+};
+Bot.prototype.assignDomain = function (options, cb) {
+	var self = this;
+	var node = {
+		client: options.UUID,
+		ip: options.ip,
+		port: options.port
+	};
+	// testNode
+	this.testNode(node, function (e, d) {
+		if(e) {
+			var msg = 'Unreachable ' + node.ip + ':' + node.port;
+			e = new Error(msg);
+			return cb(e);
+		}
+		else {
+			self.updateDomain(options, cb);
+		}
+	});
+};
+Bot.prototype.updateDomain = function (options, cb) {
+	var self = this;
+	var cname = ['SIMPLE', 'subdomain'].join('_');
+	var collection = this.db.collection(cname);
+	var index = this.subdomainIndex[options.domain];
+	var expire = new Date().getTime() + period;
+	var record = {
+		domain: options.domain,
+		UUID: options.UUID,
+		ip: options.ip,
+		port: options.port,
+		expire: expire
+	};
+	var findQuery = { domain: options.domain };
+
+	// update memory data
+	if(index > -1) { this.subdomain[index] = record; }
+	else {
+		this.subdomainIndex[options.domain] = (this.subdomain.push(record) - 1);
+	}
+
+	// update db data
+	collection.findAndModify(
+		findQuery,
+		{},
+		{$set: record},
+		{upsert: true},
+		function (e, d) { cb(e); }
+	);
+};
+Bot.prototype.proxy = function (subdomain) {
+	var target, node;
+	var index = this.subdomainIndex[subdomain];
+	if(!(index > -1)) { return false; }
+	node = this.subdomain[index];
+	target = url.format({
+		protocol: "http",
+		hostname: node.ip,
+		port: node.port
+	});
+	return target;
 };
 
 module.exports = Bot;
