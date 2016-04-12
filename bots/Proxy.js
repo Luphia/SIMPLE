@@ -98,6 +98,7 @@ Bot.prototype.startServer = function(port, httpsPort, cb) {
 Bot.prototype.forward = function (req, res) {
 	var host = req.headers.host;
 	var subdomain = host.match(/^[a-zA-Z0-9]+./);
+	if(subdomain != null) { subdomain = subdomain[0].substr(0, subdomain[0].length - 1); }
 	var bot = this.getBot('Receptor');
 	var port = bot.listening || 5566;
 	var options = {};
