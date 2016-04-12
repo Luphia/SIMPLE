@@ -242,9 +242,9 @@ Bot.prototype.loadNode = function () {
 	findQuery = {};
 	collection.find(findQuery, {}).toArray(function (e, d) {
 		self.nodes = d;
-		for(var k in d) {
-			self.nodeIndex[ d[k].client ] = k;
-		}
+		d.map(function (v, k) {
+			self.nodeIndex[ v.client ] = k;
+		});
 	});
 };
 Bot.prototype.loadSubdomain = function () {
@@ -254,9 +254,9 @@ Bot.prototype.loadSubdomain = function () {
 	findQuery = {};
 	collection.find(findQuery, {}).toArray(function (e, d) {
 		self.subdomain = d;
-		for(var k in d) {
-			self.subdomainIndex[ d[k].domain ] = k;
-		}
+		d.map(function (v, k) {
+			self.subdomainIndex[ v.domain ] = k;
+		});
 	});
 };
 Bot.prototype.addNode = function(node) {
@@ -433,9 +433,9 @@ Bot.prototype.updateDomain = function (options, cb) {
 		function (e, d) { cb(e); }
 	);
 };
-Bot.prototype.proxy = function (subdomain) {
+Bot.prototype.proxy = function (query) {
 	var target, node;
-	var index = this.subdomainIndex[subdomain];
+	var index = this.subdomainIndex[query.domain];
 	if(!(index > -1)) { return false; }
 	node = this.subdomain[index];
 	target = url.format({
