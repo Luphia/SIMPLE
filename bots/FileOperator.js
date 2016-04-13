@@ -52,17 +52,27 @@ Bot.prototype.addFile = function (file, cb) {
 			meta.custom = file.custom;
 		}
     meta.ctime = new Date().getTime();
-    collection.insertOne(meta, {}, function (e1, d1) {
-      if(e1) { return cb(e1); }
-      var fid = meta._id.toString();
-      meta.fid = fid;
-      delete meta._id;
-      cb(null, meta);
-      /* move file */
+		collection.findOne({hash: meta.hash}, {}, function (e1, d1) {
+			if(e1) { return cb(e1); }
+			if(d1) {
+				/* existing file */
+				e1 = new Error('existing file');
+				e1.code = 3;
+				e1.fid = d1._id.toString();
+				return cb(e1);
+			}
 
-      var destination = path.join(self.filePath, uid, fid);
-      self.moveFile(filepath, destination, function () {});
-    });
+			collection.insertOne(meta, {}, function (e2, d2) {
+	      if(e2) { return cb(e2); }
+	      var fid = meta._id.toString();
+	      meta.fid = fid;
+	      delete meta._id;
+	      cb(null, meta);
+	      /* move file */
+	      var destination = path.join(self.filePath, uid, fid);
+	      self.moveFile(filepath, destination, function () {});
+	    });
+		});
   });
 };
 
