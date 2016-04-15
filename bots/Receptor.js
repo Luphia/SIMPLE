@@ -728,6 +728,27 @@ Bot.prototype.init = function(config) {
 			next();
 		});
 	});
+	// remove from album
+	this.router.put('/removeFromAlbum/', checkLogin, function (req, res, next) {
+		var result = new Result();
+		res.result = result;
+		var uid = req.session.uid;
+		var files = req.body.files;
+		var albums = req.body.albums;
+		var bot = self.getBot('TagOperator');
+		bot.removeFromAlbum(uid, files, albums, function (e, d) {
+			if(e) {
+				result.setMessage(e.message);
+				result.setData(e);
+			}
+			else {
+				result.setResult(1);
+				result.setMessage('remove files from albums');
+				result.setData(d);
+			}
+			next();
+		});
+	});
 
 	// subdomain register
 	this.router.post('/subdomain/', function (req, res, next) {
