@@ -728,26 +728,6 @@ Bot.prototype.init = function(config) {
 			next();
 		});
 	});
-
-	// subdomain register
-	this.router.post('/subdomain/', function (req, res, next) {
-		var result = new Result();
-		var bot = self.getBot('tracker');
-		res.result = result;
-		bot.domainRegister(req.body, function (e, d) {
-			if(e) {
-				result.setMessage(e.message);
-				result.setData(e);
-			}
-			else {
-				result.setResult(1);
-				result.setMessage('create subdomain');
-				result.setData(d);
-			}
-			next();
-		});
-	});
-
 	// remove from album
 	this.router.put('/removeFromAlbum/', checkLogin, function (req, res, next) {
 		var result = new Result();
@@ -764,6 +744,25 @@ Bot.prototype.init = function(config) {
 			else {
 				result.setResult(1);
 				result.setMessage('remove files from albums');
+				result.setData(d);
+			}
+			next();
+		});
+	});
+
+	// subdomain register
+	this.router.post('/subdomain/', function (req, res, next) {
+		var result = new Result();
+		var bot = self.getBot('tracker');
+		res.result = result;
+		bot.domainRegister(req.body, function (e, d) {
+			if(e) {
+				result.setMessage(e.message);
+				result.setData(e);
+			}
+			else {
+				result.setResult(1);
+				result.setMessage('create subdomain');
 				result.setData(d);
 			}
 			next();
