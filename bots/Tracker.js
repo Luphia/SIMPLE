@@ -433,17 +433,46 @@ Bot.prototype.updateDomain = function (options, cb) {
 		function (e, d) { cb(e); }
 	);
 };
-Bot.prototype.proxy = function (query) {
+Bot.prototype.proxy = function (query, test, cb) {
+	var self = this;
 	var target, node;
+	var now = new Date().getTime();
 	var index = this.subdomainIndex[query.domain];
-	if(!(index > -1)) { return false; }
+	if(!(index > -1)) {
+		var err = new Error('subdomain not found');
+		err.code = 1;
+		cb(err);
+		return;
+	}
+
 	node = this.subdomain[index];
 	target = url.format({
 		protocol: "http",
 		hostname: node.ip,
 		port: node.port
 	});
-	return target;
+
+	if(node.expire > now) {
+		return cb(null, target);
+	}
+	else if (!test) {
+		var err = new Error('machine offline');
+		err.code = 3;
+		return cb(err);
+	}
+	else {
+		this.testNode(node, function (e) {
+			if(e) {
+				var err = new Error('machine offline');
+				err.code = 3;
+				return cb(err);
+			}
+			else {
+				updateDomain(node, function () {});
+				return cb(null, target);
+			}
+		});
+	}
 };
 
 module.exports = Bot;

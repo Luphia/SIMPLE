@@ -96,20 +96,38 @@ Bot.prototype.startServer = function(port, httpsPort, cb) {
 };
 
 Bot.prototype.forward = function (req, res) {
+	var self = this;
 	var host = req.headers.host;
-	var subdomain = host.match(/^[a-zA-Z0-9]+./);
+	var subdomain = host.match(/^[a-zA-Z0-9]+\./);
 	if(subdomain != null) { subdomain = subdomain[0].substr(0, subdomain[0].length - 1); }
 	var bot = this.getBot('Receptor');
 	var port = bot.listening || 5566;
 	var options = {};
 	options.target = 'http://127.0.0.1:' + port;
-	if(textype.isPublicIP(host) || subdomain === null) {}
+	if(textype.isPublicIP(host) || subdomain === null) {
+		this.proxy.web(req, res, options);
+	}
 	else {
+		var test = /(^\/test\/)|(^\/test$)/.test(req.url)
 		var tracker = this.getBot('Tracker');
 		var opt = {domain: subdomain};
-		options.target = tracker.proxy(opt) || options.target;
+		tracker.proxy(opt, test, function (e, nodeurl) {
+			if(e) {
+				var rs = {
+					result: -5,
+					message: e.message,
+					data: {code: e.code}
+				};
+				res.write(JSON.stringify(rs));
+				res.end();
+				return;
+			}
+			else {
+				options.target = nodeurl;
+				self.proxy.web(req, res, options);
+			}
+		});
 	}
-	this.proxy.web(req, res, options);
 };
 
 module.exports = Bot;
