@@ -151,7 +151,18 @@ Bot.prototype.forward = function (req, res) {
 			}
 			else {
 				options.target = nodeurl;
-				self.proxy.web(req, res, options);
+				self.proxy.web(req, res, options, function (e) {
+					if(!e) {
+						tracker.online(subdomain);
+					}
+					else {
+						tracker.offline(subdomain);
+						var rs = {result: -5, message: 'machine offline', data: {code: 3}};
+						res.writeHead(500, {'Content-Type': 'application/json'});
+						res.write(JSON.stringify(rs));
+						res.end();
+					}
+				});
 			}
 		});
 	}
