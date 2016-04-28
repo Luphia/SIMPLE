@@ -8,6 +8,7 @@ const mongodb = require('mongodb');
 const Result = require('../classes/Result.js');
 
 var period = 86400000 * 7;
+var alive = 60000;
 
 var nodeEncode = function(node) {
 	node = node || {};
@@ -414,7 +415,8 @@ Bot.prototype.updateDomain = function (options, cb) {
 		UUID: options.UUID,
 		ip: options.ip,
 		port: options.port,
-		expire: expire
+		expire: expire,
+		alive: new Date().getTime()
 	};
 	var findQuery = { domain: options.domain };
 
@@ -451,7 +453,6 @@ Bot.prototype.proxy = function (query, test, cb) {
 		hostname: node.ip,
 		port: node.port
 	});
-
 	if(node.expire > now) {
 		return cb(null, target);
 	}

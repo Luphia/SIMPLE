@@ -29,6 +29,12 @@ Bot.prototype.init = function (config) {
 		var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress || '0.0.0.0';
 	  proxyReq.setHeader('x-forwarded-for', ip);
 	});
+	this.proxy.on('error', function (err, req, res) {
+		var rs = {result: -5, message: 'machine offline', data: {code: 3}};
+		res.writeHead(500, {'Content-Type': 'application/json'});
+		res.write(JSON.stringify(rs));
+		res.end();
+	});
 
 	this.http = require('http').createServer(function (req, res) { self.forward(req, res); });
 	this.http.on('error', function(err) {
@@ -98,7 +104,7 @@ Bot.prototype.startServer = function(port, httpsPort, cb) {
 Bot.prototype.forward = function (req, res) {
 	var self = this;
 	var host = req.headers.host;
-	var subdomain = host.match(/^[a-zA-Z0-9]+\./);
+	var subdomain = host.split(".").length > 2? host.match(/^[a-zA-Z0-9]+\./): null;
 	if(subdomain != null) { subdomain = subdomain[0].substr(0, subdomain[0].length - 1); }
 	var bot = this.getBot('Receptor');
 	var port = bot.listening || 5566;
@@ -107,11 +113,32 @@ Bot.prototype.forward = function (req, res) {
 	if(textype.isPublicIP(host) || subdomain === null) {
 		this.proxy.web(req, res, options);
 	}
-	else {
-		var test = /(^\/test\/)|(^\/test$)/.test(req.url)
+	else if(/^\/test\/$/.test(req.url)) {
 		var tracker = this.getBot('Tracker');
 		var opt = {domain: subdomain};
 		tracker.proxy(opt, test, function (e, nodeurl) {
+			var rs = {result: 0, message: "", data: {}};
+			if(e) {
+				rs.result = -5;
+				rs.message = e.message;
+				rs.data = {code: e.code};
+				res.write(JSON.stringify(rs));
+				res.end();
+				return;
+			}
+			else {
+				rs.result = 1;
+				rs.message = "node is working";
+				res.write(JSON.stringify(rs));
+				res.end();
+				return;
+			}
+		});
+	}
+	else {
+		var tracker = this.getBot('Tracker');
+		var opt = {domain: subdomain};
+		tracker.proxy(opt, false, function (e, nodeurl) {
 			if(e) {
 				var rs = {
 					result: -5,
