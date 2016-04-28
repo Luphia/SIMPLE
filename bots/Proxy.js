@@ -116,7 +116,7 @@ Bot.prototype.forward = function (req, res) {
 	else if(/^\/test\/$/.test(req.url)) {
 		var tracker = this.getBot('Tracker');
 		var opt = {domain: subdomain};
-		tracker.proxy(opt, test, function (e, nodeurl) {
+		tracker.proxy(opt, true, function (e, nodeurl) {
 			var rs = {result: 0, message: "", data: {}};
 			if(e) {
 				rs.result = -5;
