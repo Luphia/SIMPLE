@@ -129,6 +129,7 @@ Bot.prototype.forward = function (req, res) {
 			else {
 				rs.result = 1;
 				rs.message = "node is working";
+				rs.data = {url: nodeurl};
 				res.write(JSON.stringify(rs));
 				res.end();
 				return;
