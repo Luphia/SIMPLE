@@ -440,12 +440,12 @@ Bot.prototype.updateDomain = function (options, cb) {
 	);
 };
 Bot.prototype.online = function (subdomain) {
-	logger.info.info('online', subdomain);
+	// logger.info.info('online', subdomain);
 	var index = this.subdomainIndex[subdomain];
 	if(index > -1) { this.subdomain[index].alive = new Date().getTime(); }
 };
 Bot.prototype.offline = function (subdomain) {
-	logger.info.info('offline', subdomain);
+	// logger.info.info('offline', subdomain);
 	var index = this.subdomainIndex[subdomain];
 	if(index > -1) { this.subdomain[index].alive = 0; }
 }

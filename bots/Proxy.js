@@ -30,10 +30,13 @@ Bot.prototype.init = function (config) {
 	  proxyReq.setHeader('x-forwarded-for', ip);
 	});
 	this.proxy.on('error', function (err, req, res) {
-		var rs = {result: -5, message: 'machine offline', data: {code: 3}};
-		res.writeHead(500, {'Content-Type': 'application/json'});
-		res.write(JSON.stringify(rs));
-		res.end();
+		try {
+			var rs = {result: -5, message: 'machine offline', data: {code: 3}};
+			res.writeHead(500, {'Content-Type': 'application/json'});
+			res.write(JSON.stringify(rs));
+			res.end();
+		}
+		catch (e) {}
 	});
 
 	this.http = require('http').createServer(function (req, res) { self.forward(req, res); });
@@ -104,6 +107,11 @@ Bot.prototype.startServer = function(port, httpsPort, cb) {
 Bot.prototype.forward = function (req, res) {
 	var self = this;
 	var host = req.headers.host;
+	// unexpected request
+	if (host === undefined) {
+		host = '';
+		logger.threat.info(req.connection.remoteAddress + ":" + req.connection.remotePort, req.headers);
+	}
 	var subdomain = host.split(".").length > 2? host.match(/^[a-zA-Z0-9]+\./): null;
 	if(subdomain != null) { subdomain = subdomain[0].substr(0, subdomain[0].length - 1); }
 	var bot = this.getBot('Receptor');
@@ -158,10 +166,13 @@ Bot.prototype.forward = function (req, res) {
 					}
 					else {
 						tracker.offline(subdomain);
-						var rs = {result: -5, message: 'machine offline', data: {code: 3}};
-						res.writeHead(500, {'Content-Type': 'application/json'});
-						res.write(JSON.stringify(rs));
-						res.end();
+						try {
+							var rs = {result: -5, message: 'machine offline', data: {code: 3}};
+							res.writeHead(500, {'Content-Type': 'application/json'});
+							res.write(JSON.stringify(rs));
+							res.end();
+						}
+						catch (e) {}
 					}
 				});
 			}
