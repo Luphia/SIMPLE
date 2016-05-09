@@ -124,7 +124,7 @@ Bot.prototype.forward = function (req, res) {
 	else if(/^\/test\/$/.test(req.url)) {
 		var tracker = this.getBot('Tracker');
 		var opt = {domain: subdomain};
-		res.header("Content-Type", 'application/json');
+		res.writeHead(200, {'Content-Type': 'application/json'});
 		tracker.proxy(opt, true, function (e, nodeurl) {
 			var rs = {result: 0, message: "", data: {}};
 			if(e) {
@@ -155,7 +155,7 @@ Bot.prototype.forward = function (req, res) {
 					message: e.message,
 					data: {code: e.code}
 				};
-				res.header("Content-Type", 'application/json');
+				res.writeHead(200, {'Content-Type': 'application/json'});
 				res.write(JSON.stringify(rs));
 				res.end();
 				return;
