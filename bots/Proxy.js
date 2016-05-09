@@ -162,8 +162,8 @@ Bot.prototype.forward = function (req, res) {
 			}
 			else {
 				options.target = nodeurl;
-				self.proxy.web(req, res, options, function (e) {
-					if(!e) {
+				self.proxy.web(req, res, options, function (e1) {
+					if(!e1) {
 						tracker.online(subdomain);
 					}
 					else {
@@ -174,7 +174,7 @@ Bot.prototype.forward = function (req, res) {
 							res.write(JSON.stringify(rs));
 							res.end();
 						}
-						catch (e) {}
+						catch (e2) {}
 					}
 				});
 			}
