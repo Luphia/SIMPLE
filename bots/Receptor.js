@@ -115,10 +115,12 @@ returnData = function(req, res, next) {
 			res.end();
 		}
 		else {
+			res.header("Content-Type", 'application/json');
 			res.send(json);
 		}
 	}
 	else {
+		res.header("Content-Type", 'application/json');
 		res.send(result);
 	}
 
