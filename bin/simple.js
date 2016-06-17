@@ -4,11 +4,10 @@ const fs = require('fs');
 const path = require('path');
 const log4js = require('log4js');
 const dvalue = require('dvalue');
-const ecDB = require('ecdb');
 const packageInfo = require('../package.json');
+const simpleConfig = require('../config/');
 
 var mongodb = require('mongodb').MongoClient;
-var ecdb = new ecDB();
 var UUID, config, folders;
 
 // initial folder
@@ -78,6 +77,20 @@ config = {
   powerby: packageInfo.name + " v" + packageInfo.version
 };
 
+var connectDB = function (options, cb) {
+  options = dvalue.default(options, {});
+  switch (options.type) {
+    case 'mongodb':
+      var path = options.path;
+      mongodb.connect(path, cb);
+      break;
+    default:
+      var DB = require('tingodb')().Db;
+      db = new DB(dataset, {});
+      cb(null, db);
+  }
+};
+
 // start all bot
 var botFolder = path.join(__dirname, "../bots");
 var files = fs.readdirSync(botFolder);
@@ -89,8 +102,7 @@ var getBot = function (name) {
   }
 };
 var startBot = function () {
-  ecdb.connect({url: dataset}, function() {});
-  mongodb.connect("mongodb://127.0.0.1:27056/simple", function (e, db) {
+  connectDB(simpleConfig.db, function (e, db) {
     var sub = "js";
     var reg = new RegExp('\.' + sub + '$');
     for(var key in files) {
@@ -100,7 +112,6 @@ var startBot = function () {
         bots.push(bot);
         bot.name = files[key].split('.' + sub)[0];
         bot.db = db;
-        bot.ecdb = ecdb;
         bot.getBot = getBot;
       }
     }

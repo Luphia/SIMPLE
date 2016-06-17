@@ -32,7 +32,8 @@ uploads
 dataset
 
 # Config
-config
+config/*
+!config/index.js
 
 # Private files
 private.*

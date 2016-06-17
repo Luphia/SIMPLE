@@ -26,7 +26,7 @@
     "body-parser": "^1.14.2",
     "borg-ring": "^0.1.1",
     "chokidar": "^1.4.2",
-    "dvalue": "^1.0.6",
+    "dvalue": "^1.0.7",
     "ecdb": "^0.2.11",
     "echashcash": "^1.0.1",
     "express": "^4.13.3",
@@ -42,6 +42,7 @@
     "raid2x": "^0.1.23",
     "serve-favicon": "^2.3.0",
     "textype": "^1.0.3",
+    "tingodb": "^0.4.2",
     "udp2p": "^0.2.17"
   }
 }
