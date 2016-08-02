@@ -15,9 +15,7 @@ bot.done('b', {"msg": "You!"});
 
 */
 
-var child_process = require('child_process')
-,	Result = require('../classes/Result.js')
-;
+var child_process = require('child_process');
 
 var Bot = function(config) {
 	this.init(config);
@@ -31,7 +29,8 @@ Bot.prototype.init = function(config) {
 	this.callback = {};
 
 	if(!!config) {
-		this.db = config.db;
+		if(typeof(config.getBot) == 'function') { this.getBot = config.getBot; }
+		if(typeof(config.getTemplate) == 'function') { this.getTemplate = config.getTemplate; }
 	}
 };
 

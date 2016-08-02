@@ -9,12 +9,13 @@ const exec = require('child_process').exec;
 const fs = require('fs');
 const crypto = require('crypto');
 const path = require('path');
+const url = require('url');
 const bodyParser = require('body-parser');
-const multer  = require('multer');
+const multer = require('multer');
 const http = require('http');
 const echashcash = require('echashcash');
+const ecresult = require('ecresult');
 const dvalue = require('dvalue');
-const Result = require('../classes/Result.js');
 
 const hashcashLevel = 3;
 const allowDelay = 10000;
@@ -26,10 +27,8 @@ var pathCert = path.join(__dirname, '../config/cert.pfx'),
 var checkLogin, checkHashCash, errorHandler, returnData;
 checkLogin = function (req, res, next) {
 	if(req.session.uid === undefined) {
-		var result = new Result();
-		result.setResult(-1);
-		result.setMessage('User No Authorized');
-		res.result = result;
+		res.result.setErrorCode('10201');
+		res.result.setMessage('User Not Authorized');
 		returnData(req, res, next)
 	}
 	else {
@@ -39,22 +38,20 @@ checkLogin = function (req, res, next) {
 checkHashCash = function (req, res, next) {
 	var invalidHashcash = function () {
 		//-- for test
-		var h = req.headers.hashcash;
-		var t = new Date().getTime();
-		if(h) { t = parseInt(h.split(":")[0]) || t; }
-		var c = [req.url, t, ""].join(":");
+		var t, h = req.headers.hashcash, nt = new Date().getTime();
+		if(h) { t = parseInt(h.split(":")[0]) || nt; }
+		var c = [req.url, nt, ""].join(":");
 		var hc = echashcash(c);
 		var d = {
 			hashcash: req.headers.hashcash,
-			sample: [t, hc].join(":")
+			sample: [nt, hc].join(":")
 		};
 		if(new Date().getTime() - t > allowDelay) { d.information = "timeout"; }
+		if(new Date().getTime() < t) { d.information = "future time"; }
 
-		var result = new Result();
-		result.setResult(-2);
-		result.setMessage('Invalid Hashcash');
-		result.setData(d);	//-- for test
-		res.result = result;
+		res.result.setErrorCode('10101');
+		res.result.setMessage('Invalid Hashcash');
+		res.result.setData(d);	//-- for test
 		returnData(req, res, next);
 	};
 
@@ -72,15 +69,24 @@ checkHashCash = function (req, res, next) {
 };
 errorHandler = function (err, req, res, next) {
 	logger.exception.error(err);
-	res.statusCode = 500;
-	res.json({result: 0, message: 'oops, something wrong...'});
+	if(!res.finished) {
+		try {
+			res.statusCode = 500;
+			res.result.setMessage('oops, something wrong...');
+			res.send(res.result.response());
+		}
+		catch(e) {}
+	}
 };
 returnData = function(req, res, next) {
-	var result = res.result, session;
+	var session, json, isFile, isURL;
 
-	if(result) {
-		if(typeof(result.getSession) == 'function') {
-			session = result.getSession();
+	if(!res.finished) {
+		json = res.result.response();
+		isFile = new RegExp("^[a-zA-Z0-9\-]+/[a-zA-Z0-9\-\.]+$").test(json.message);
+		isURL = new RegExp("https?:\/\/(?:www\.|(?!www))[^\s\.]+\.[^\s]{2,}|www\.[^\s]+\.[^\s]{2,}").test(json.message);
+		if(res.result.isDone()) {
+			session = res.result.getSession();
 
 			for(var key in session) {
 				if(session[key] === null) {
@@ -91,20 +97,27 @@ returnData = function(req, res, next) {
 				}
 			}
 		}
-	}
-	else {
-		res.status(404);
-		result = new Result();
-		result.setMessage("Invalid operation");
-	}
-
-	if(typeof(result.toJSON) == 'function') {
-		var json = result.toJSON();
-		var isFile = new RegExp("^[a-zA-Z0-9\-]+/[a-zA-Z0-9\-]+$").test(json.message);
+		else {
+			res.status(404);
+			res.result.setMessage("Invalid operation");
+		}
 
 		if(isFile) {
-			res.header("Content-Type", json.message);
-			res.send(json.data);
+			res.header('Content-Type', json.message);
+			res.end(json.data);
+		}
+		else if(isURL) {
+			var options = url.parse(json.message);
+			options.method = 'GET';
+			var crawler = http.request(options, function (cRes) {
+				res.header('Content-Type', cRes.headers['content-type']);
+				cRes.on('data', function (chunk) {
+					res.write(chunk);
+				});
+				cRes.on('end', function () {
+					res.end();
+				})
+			}).on('error', function (e) { res.end(); }).end();
 		}
 		else if(json.result >= 100) {
 			res.status(json.result);
@@ -120,13 +133,13 @@ returnData = function(req, res, next) {
 		}
 	}
 	else {
-		res.header("Content-Type", 'application/json');
-		res.send(result);
+		// timeout request
+		json = res.result.response();
+		res.result.resetResponse();
 	}
 
-	result.attr.data = dvalue.default(result.attr.data, {});
-	var rs = result.attr.data.code? [result.attr.result, result.attr.data.code].join(':'): result.attr.result;
-	logger.info.info(req.method, req.url, rs, req.session.ip);
+	var rs = json.errorcode? [json.result, json.errorcode].join(':'): json.result;
+	logger.info.info(req.method, req.url, rs, req.session.ip, json.cost);
 };
 
 var Bot = function(config) {
@@ -138,8 +151,8 @@ util.inherits(Bot, ParentBot);
 Bot.prototype.init = function(config) {
 	var self = this;
 	Bot.super_.prototype.init.call(this, config);
-	this.serverPort = [5566];
-	this.httpsPort = [7788];
+	this.serverPort = [5566, 80];
+	this.httpsPort = [7788, 443];
 	this.nodes = [];
 	this.monitorData = {};
 	this.monitorData.traffic = {in: 0, out: 0};
@@ -150,6 +163,8 @@ Bot.prototype.init = function(config) {
 	var shards = folders.shards || "./shards/";
 	this.shardPath = shards;
 	var logs = folders.logs || "./logs/";
+	var passportBot = this.getBot("Passport");
+	var jobQueue = this.getBot("JobQueue");
 
 	this.router = express.Router();
 	this.app = express();
@@ -165,6 +180,7 @@ Bot.prototype.init = function(config) {
 	});
 	this.http.on('listening', function() {
 		config.listening = self.listening;
+		logger.info.info('HTTP:', self.listening);
 	});
 
 	// if has pxf -> create https service
@@ -188,6 +204,7 @@ Bot.prototype.init = function(config) {
 
 		this.https.on('listening', function() {
 			config.listeningHttps = self.listeningHttps;
+			logger.info.info('HTTPS:', self.listeningHttps);
 		});
 	}
 
@@ -200,83 +217,280 @@ Bot.prototype.init = function(config) {
 	this.app.set('port', this.serverPort.pop());
 	this.app.set('portHttps', this.httpsPort.pop());
 	this.app.use(this.session);
-	this.app.use(function (req, res, next) { self.tokenParser(req, res, next); });
+	this.app.use('/auth/*', passportBot.initialize);
 	this.app.use(express.static(path.join(__dirname, '../public')));
 	this.app.use(bodyParser.urlencoded({ extended: false }));
 	this.app.use(bodyParser.json({}));
 	this.app.use(function(req, res, next) { self.filter(req, res, next); });
+	this.app.use(jobQueue.middleware());
 	this.app.use(this.router);
 	this.app.use(returnData);
 	this.ctrl = [];
 
-	// get system infomation
-	this.router.get('/version/', function (req, res, next) {
-		var result = new Result();
-		result.setResult(1);
-		result.setMessage('Application Information');
-		result.setData(self.config.package);
-		res.result = result;
+	// HOME
+	this.router.get('/', function (req, res, next) {
+		res.result.setResult(1);
+		res.result.setMessage('Application Information');
+		res.result.setData(self.config.package);
 		next();
 	});
 
-	// subdomain register
-	this.router.post('/subdomain/', function (req, res, next) {
-		var result = new Result();
-		var bot = self.getBot('tracker');
-		res.result = result;
-		bot.domainRegister(req.body, function (e, d) {
+	// get system infomation
+	this.router.get('/version/', function (req, res, next) {
+		res.result.setResult(1);
+		res.result.setMessage('Application Information');
+		res.result.setData(self.config.package);
+		next();
+	});
+
+	// get command Result
+	this.router.get('/command/:id', checkHashCash, function (req, res, next) {
+		var commandID = req.params.id;
+		var options = {attr: {command: commandID}};
+		var rs = jobQueue.findJob(options);
+		if(rs) {
+			res.result = rs;
+			rs.resetResponse();
+		}
+		else {
+			res.result.setErrorCode('00002');
+			res.result.setMessage('command not found:', commandID);
+		}
+		next();
+	});
+
+	// session data
+	this.router.get('/session', function (req, res, next) {
+		res.result.setResult(1);
+		res.result.setMessage('session data');
+		res.result.setData(req.session);
+		next();
+	});
+
+	// user profile
+	this.router.get('/profile', checkLogin, function (req, res, next) {
+		var bot = self.getBot('User');
+		var condition = {uid: req.session.uid};
+		bot.getProfile(condition, function (e, d) {
 			if(e) {
-				result.setMessage(e.message);
-				result.setData(e);
+				res.result.setErrorCode(e.code);
+				res.result.setMessage(e.message);
 			}
 			else {
-				result.setResult(1);
-				result.setMessage('create subdomain');
-				result.setData(d);
+				res.result.setResult(1);
+				res.result.setMessage('user profile');
+				res.result.setData(d);
+			}
+			next();
+		});
+	});
+	// user register
+	this.router.post('/register', checkHashCash, function (req, res, next) {
+		var user = {
+			account: req.body.email,
+			email: req.body.email,
+			password: req.body.password,
+			allowmail: !!req.body.allowmail
+		};
+		var bot = self.getBot('User');
+		bot.addUser(user, function (e, d) {
+			if(e) {
+				res.result.setErrorCode(e.code);
+				res.result.setMessage(e.message);
+			}
+			else {
+				res.result.setResult(1);
+				res.result.setMessage('user register');
+				res.result.setData(d);
+				res.result.setSession({uid: d.uid});
+			}
+			next();
+		});
+	});
+	// resend verify email
+	this.router.get('/resend', checkLogin, function (req, res, next) {
+		var options = { uid: req.session.uid };
+		var bot = self.getBot('User');
+		bot.sendVericicationMail(options, function (e, d) {
+			if(e) {
+				res.result.setErrorCode(e.code);
+				res.result.setMessage(e.message);
+			}
+			else {
+				res.result.setResult(1);
+				res.result.setMessage('Resend verify code');
+			}
+			next();
+		});
+	});
+	this.router.get('/resend/:email', checkHashCash, function (req, res, next) {
+		var options = { email: req.params.email, uid: req.session.uid };
+		var bot = self.getBot('User');
+		bot.sendVericicationMail(options, function (e, d) {
+			if(e) {
+				res.result.setErrorCode(e.code);
+				res.result.setMessage(e.message);
+			}
+			else {
+				res.result.setResult(1);
+				res.result.setMessage('Resend verify code');
+			}
+			next();
+		});
+	});
+	// user verification
+	this.router.get('/register/:account/:validcode', function (req, res, next) {
+		var user = {account: req.params.account, validcode: req.params.validcode};
+		var bot = self.getBot('User');
+		bot.emailVerification(user, function (e, d) {
+			if(e) {
+				res.result.setErrorCode(e.code);
+				res.result.setMessage(e.message);
+			}
+			else {
+				res.result.setResult(1);
+				res.result.setMessage('user verification');
+				res.result.setData({uid: d.uid});
+				res.result.setSession({uid: d.uid});
+			}
+			next();
+		});
+	});
+	// user login
+	this.router.post('/login', checkHashCash, function (req, res, next) {
+		var user = {account: req.body.account, password: req.body.password};
+		var bot = self.getBot('User');
+		bot.login(user, function (e, d) {
+			if(e) {
+				res.result.setErrorCode(e.code);
+				res.result.setMessage(e.message);
+				res.result.setData({uid: e.uid});
+			}
+			else {
+				res.result.setResult(1);
+				res.result.setMessage('login successfully');
+				res.result.setData(d);
+				res.result.setSession({uid: d.uid});
+			}
+			next();
+		});
+	});
+	// user logout
+	this.router.get('/logout', function (req, res, next) {
+		res.result.setResult(1);
+		res.result.setMessage('logout successfully');
+		res.result.setSession({uid: null});
+		next();
+	});
+	this.router.get('/logout/:token', function (req, res, next) {
+		var token = req.params.token;
+		var bot = self.getBot('User');
+		bot.destroyToken(token, function () {});
+		res.result.setResult(1);
+		res.result.setMessage('logout successfully');
+		res.result.setSession({uid: null});
+		next();
+	});
+	// renew token
+	this.router.get('/renew/:token/:renew', function (req, res, next) {
+		var token = {token: req.params.token, renew: req.params.renew};
+		var bot = self.getBot('User');
+		bot.renew(token, function (e, d) {
+			if(e) {
+				res.result.setErrorCode(e.code);
+				res.result.setMessage(e.message);
+			}
+			else {
+				res.result.setResult(1);
+				res.result.setMessage('token renew');
+				res.result.setData(d);
+			}
+			next();
+		});
+	});
+	// forget password
+	this.router.post('/password/forget', checkHashCash, function (req, res, next) {
+		var user = {email: req.body.email};
+		var bot = self.getBot('User');
+		bot.forgetPassword(user, function (e, d) {
+			if(e) {
+				res.result.setErrorCode(e.code);
+				res.result.setMessage(e.message);
+			}
+			else {
+				res.result.setResult(1);
+				res.result.setMessage('request change password');
+				res.result.setData(d);
+			}
+			next();
+		});
+	});
+	// check reset password
+	this.router.get('/password/reset/:uid/:resetcode', checkHashCash, function (req, res, next) {
+		var options = {
+			uid: req.params.uid,
+			resetcode: req.params.resetcode,
+		};
+		var bot = self.getBot('User');
+		bot.checkResetPassword(options, function (e, d) {
+			if(e) {
+				res.result.setErrorCode(e.code);
+				res.result.setMessage(e.message);
+			}
+			else {
+				res.result.setResult(1);
+				res.result.setMessage('password reset code is valid');
+			}
+			next();
+		});
+	});
+	// reset password
+	this.router.put('/password/reset/:uid', checkHashCash, function (req, res, next) {
+		var options = {
+			uid: req.params.uid,
+			resetcode: req.body.resetcode,
+			password: req.body.password
+		};
+		var bot = self.getBot('User');
+		bot.resetPassword(options, function (e, d) {
+			if(e) {
+				res.result.setErrorCode(e.code);
+				res.result.setMessage(e.message);
+			}
+			else {
+				res.result.setResult(1);
+				res.result.setMessage('successful password reset');
+				res.result.setData(d);
+			}
+			next();
+		});
+	});
+	// change password
+	this.router.put('/password/', checkLogin, function (req, res, next) {
+		var user = {
+			uid: req.session.uid,
+			password_old: req.body.password_old,
+			password_new: req.body.password_new
+		};
+		var bot = self.getBot('User');
+		bot.changePassword(user, function (e, d) {
+			if(e) {
+				res.result.setErrorCode(e.code);
+				res.result.setMessage(e.message);
+			}
+			else {
+				res.result.setResult(1);
+				res.result.setMessage('successful password change');
+				res.result.setData(d);
 			}
 			next();
 		});
 	});
 
-	// tracker
-	this.router.get('/node/:client', function (req, res, next) {
-		var tracker = self.getBot('tracker');
-		var msg = {
-			"url": req._parsedOriginalUrl.pathname,
-			"method": req.method,
-			"params": req.params,
-			"query": req.query,
-			"body": req.body,
-			"sessionID": req.sessionID,
-			"session": req.session,
-			"files": req.files
-		};
-
-		tracker.exec(msg, function(err, data) {
-			if(data.length == 1) { data = data[0]; }
-			res.result = new Result(data);
-			next();
-		});
-	});
-	this.router.get('/track/', function (req, res, next) {
-		var tracker = self.getBot('tracker');
-		var msg = {
-			"url": req._parsedOriginalUrl.pathname,
-			"method": req.method,
-			"params": req.params,
-			"query": req.query,
-			"body": req.body,
-			"sessionID": req.sessionID,
-			"session": req.session,
-			"files": req.files
-		};
-
-		tracker.exec(msg, function(err, data) {
-			if(data.length == 1) { data = data[0]; }
-			res.result = new Result(data);
-			next();
-		});
-	});
+	// passport
+	this.router.get('/auth/facebook', function (req, res, next) { passportBot.facebook_authenticate(req, res, next); });
+	this.router.get('/auth/facebook/callback', function (req, res, next) { passportBot.facebook_callback(req, res, next); });
+	this.router.get('/auth/facebook/token/:access_token', checkHashCash, function (req, res, next) { passportBot.facebook_token(req, res, next); });
 };
 
 Bot.prototype.start = function(cb) {
@@ -319,16 +533,37 @@ Bot.prototype.filter = function (req, res, next) {
 	if(!req.session.ip) { req.session.ip = ip; }
 	if(!req.session.port) { req.session.port = port; }
 	var powerby = this.config.powerby;
+
+	var processLanguage = function (acceptLanguage) {
+		var regex = /((([a-zA-Z]+(-[a-zA-Z]+)?)|\*)(;q=[0-1](\.[0-9]+)?)?)*/g;
+		var l = acceptLanguage.toLowerCase().replace(/_+/g, '-');
+		var la = l.match(regex);
+		la = la.filter(function (v) {return v;}).map(function (v) {
+			var bits = v.split(';');
+			var quality = bits[1]? parseFloat(bits[1].split("=")[1]): 1.0;
+			return {locale: bits[0], quality: quality};
+		}).sort(function (a, b) { return b.quality > a.quality; });
+		return la;
+	};
+	res.language = processLanguage(req.headers['accept-language'] || 'en-US');
+
+	res.result = new ecresult();
 	res.header('X-Powered-By', powerby);
 	res.header('Client-IP', ip);
 	res.header("Access-Control-Allow-Origin", "*");
 	res.header("Access-Control-Allow-Methods", "GET, PUT, POST, DELETE, OPTIONS");
 	res.header("Access-Control-Allow-Headers", "Hashcash, Authorization, Content-Type");
-	next();
-};
 
-Bot.prototype.tokenParser = function (req, res, next) {
 	var bot = this.getBot('User');
+	var auth = req.headers.authorization;
+	var token = !!auth? auth.split(" ")[1]: '';
+	bot.checkToken(token, function (e, d) {
+		if(!!d) { req.session.uid = d.uid; }
+		next();
+	});
+};
+Bot.prototype.tokenParser = function (req, res, next) {
+
 	var auth = req.headers.authorization;
 	var token = !!auth? auth.split(" ")[1]: '';
 	bot.checkToken(token, function (e, d) {

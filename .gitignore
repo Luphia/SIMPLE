@@ -4,6 +4,8 @@ logs
 
 # Runtime data
 pids
+PID
+UUID
 *.pid
 *.seed
 
@@ -34,6 +36,7 @@ dataset
 # Config
 config/*
 !config/index.js
+!config/*.sample
 
 # Private files
 private.*

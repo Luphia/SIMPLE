@@ -1,0 +1,22 @@
+module.exports = {
+	url: '',
+	db: {
+		type: '',
+		path: '',
+		user: '',
+		password: ''
+	},
+	facebook: {
+		id: '',
+		secret: ''
+	},
+	mail: {
+		host:"",
+		secure: null,
+		port: null,
+		auth: {
+			user: '',
+			pass: ''
+	    }
+	}
+};
