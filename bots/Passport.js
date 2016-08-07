@@ -15,6 +15,7 @@ util.inherits(Bot, ParentBot);
 Bot.prototype.init = function (config) {
 	var self = this;
 	Bot.super_.prototype.init.call(this, config);
+	if(!config.facebook) { return false; }
 	var facebookProcess = function (accessToken, refreshToken, profile, done) {
 		if(!profile) { done(null, false); return; }
 		var user = {
