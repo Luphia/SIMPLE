@@ -39,7 +39,7 @@ https://nodejs.org/ - click install
 ```code
 #!/bin/bash
 
-NODE_VERSION="v6.5.0"
+NODE_VERSION="v6.7.0"
 NODE_FILENAME="node-$NODE_VERSION-linux-x64"
 PARENT_LOCATION="/opt/nodejs"
 
