@@ -23,3 +23,9 @@ sudo ln -s $PARENT_LOCATION/$NODE_FILENAME/bin/node /usr/local/bin
 sudo ln -s $PARENT_LOCATION/$NODE_FILENAME/bin/npm /usr/local/bin
 
 sudo setcap cap_net_bind_service=+ep /opt/nodejs/$NODE_FILENAME/bin/node
+
+
+openssl req -new -x509 -days 365 -nodes \
+  -out ./config/cert.pem \
+  -keyout ./config/key.pem \
+  -subj "/C=TW/ST=Taipei/L=Taipei/O=IT/CN=simple.com"
