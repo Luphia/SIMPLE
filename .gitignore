@@ -33,11 +33,6 @@ node_modules
 uploads
 dataset
 
-# Config
-config/*
-!config/index.js
-!config/*.sample
-
 # Private files
 private.*
 *.private
