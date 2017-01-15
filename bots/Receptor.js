@@ -180,6 +180,8 @@ var Bot = class extends Parent {
 	}
 	init(config) {
 		return super.init(config).then(v => {
+			logger = this.logger;
+			db = this.db;
 			this.http = require('http').createServer(this.app);
 			this.https = require('spdy').createServer(config.cert, this.app);
 			return Promise.resolve(v);

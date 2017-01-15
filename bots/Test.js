@@ -2,11 +2,12 @@
 	- call another bot: super.findBot('bot name ignore case')
 		-> return Promise resolve bot
  */
-
-
 const path = require('path');
 
 const Parent = require(path.join(__dirname, '_Bot.js'));
+
+var db, logger;
+
 var Bot = class extends Parent {
 	constructor() {
 		super();
@@ -14,18 +15,19 @@ var Bot = class extends Parent {
 	}
 	init(config) {
 		return super.init(config).then(v => {
+			logger = this.logger;
+			db = this.db;
 			// do something
-			console.log(config);
 			return Promise.resolve(v);
 		});
 	}
 	start() {
-		this.logger.trace('Yo');
-		this.logger.debug('Yo');
-		this.logger.info('Yo');
-		this.logger.warn('Yo');
-		this.logger.error('Yo');
-		this.logger.fatal('Yo');
+		logger.trace('Yo');
+		logger.debug('Yo');
+		logger.info('Yo');
+		logger.warn('Yo');
+		logger.error('Yo');
+		logger.fatal('Yo');
 		return super.start();
 	}
 };
