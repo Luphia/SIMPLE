@@ -22,7 +22,16 @@ var Bot = class extends Parent {
 		});
 	}
 	start() {
-		return super.start();
+		return super.start().then(v => {
+			// do something
+			return Promise.resolve(v);
+		});
+	}
+	ready() {
+		return super.ready().then(v => {
+			// do something
+			return Promise.resolve(v);
+		});
 	}
 };
 

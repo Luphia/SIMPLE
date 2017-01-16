@@ -82,6 +82,7 @@ var initialConfig = function (config) {
 		name: packageInfo.name,
 		version: packageInfo.version
 	};
+	config.powerby = packageInfo.name + " v" + packageInfo.version;
 
 	var defaultConfigFolder = path.join('__dirname', '../config');
 	var customConfigFolder = config.path.config;
@@ -251,10 +252,27 @@ var startService = function (Bots) {
 	var start = function (bot) {
 		return bot.start();
 	};
+	var ready = function (bot) {
+		return bot.ready();
+	};
 
 	return Bots.reduce((pre, curr) => {
-		return pre.then(start(curr));
-	}, Promise.resolve([]));
+		return pre.then(res => {
+			return start(curr).then(nextRes => {
+				res.push(nextRes);
+				return res;
+			});
+		});
+	}, Promise.resolve([])).then((v) => {
+		return Bots.reduce((pre, curr) => {
+			return pre.then(res => {
+				return ready(curr).then(nextRes => {
+					res.push(nextRes);
+					return res;
+				});
+			});
+		}, Promise.resolve([]));
+	});
 };
 
 

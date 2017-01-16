@@ -16,6 +16,9 @@ var Bot = class {
 	start() {
 		return Promise.resolve(true);
 	}
+	ready() {
+		return Promise.resolve(true);
+	}
 	getBot(name) {
 		var condition = new RegExp('^' + name + '$', 'i');
 		var bot = Bots.find(function (b) { return condition.test(b.name) });

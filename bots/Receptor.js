@@ -182,25 +182,154 @@ var Bot = class extends Parent {
 		return super.init(config).then(v => {
 			logger = this.logger;
 			db = this.db;
+
+			// listen port
+			this.listen = {http: config.main.http, https: config.main.https};
+			this.testPorts = {http: [5566, config.http], https: [7788, config.https]};
+
+			// http & https
 			this.http = require('http').createServer(this.app);
 			this.https = require('spdy').createServer(config.cert, this.app);
+
+			// session
+			this.session = Session({
+				secret: config.main.session,
+				resave: true,
+				saveUninitialized: true
+			});
+
+			// session
+			this.app.use(this.session);
+			// preprocess
+			this.app.use((req, res, next) => { this.filter(req, res, next); });
+			// static file
+			this.app.use(express.static(path.join(__dirname, '../public')));
+			this.app.use('/resources/', express.static(path.join(__dirname, '../resources')));
+			// form-data parser
+			this.app.use(bodyParser.urlencoded({ extended: false }));
+			// json parser
+			this.app.use(bodyParser.json({}));
+			this.app.use(this.router);
+			this.app.use(returnData);
+
+			this.register({method: 'get'}, '/', (options) => {
+				return Promise.resolve(config.package);
+			});
+
 			return Promise.resolve(v);
 		});
 	}
 	start() {
-		return super.start().then(v => {
-			return new Promise((resolve, reject) => {
-				this.http.listen(5566, function() {
-					console.log('http listen', 5566);
-					resolve();
-				});
+		return super.start().then(() => {
+			return this.startHttp();
+		}).then(() => {
+			return this.startHttps();
+		});
+	}
+	ready() {
+		return super.ready().then(v => {
+			console.log('ready:', this.name);
+			return Promise.resolve(v);
+		});
+	}
+
+	startHttp(retry) {
+		this.http.once('error', e => {
+			if(e.syscall == 'listen') {
+				this.listen.http = this.testPorts.http.pop() || this.listen.http + 1;
+				this.startHttp(true);
+			}
+			else {
+				// unknown error
+				logger.exception.warn(e);
+				throw e;
+			}
+		});
+		return new Promise((resolve, reject) => {
+			var listener = () => {
+				logger.info('HTTP:', this.listen.http);
+				resolve();
+			};
+			if(!retry) { this.http.on('listening', listener); }
+			this.http.listen(this.listen.http, () => {});
+		});
+	}
+	startHttps(retry) {
+		this.https.once('error', e => {
+			if(e.syscall == 'listen') {
+				this.listen.https = this.testPorts.https.pop() || this.listen.https + 1;
+				this.startHttps(true);
+			}
+			else {
+				// unknown error
+				logger.exception.warn(e);
+				throw e;
+			}
+		});
+		return new Promise((resolve, reject) => {
+			var listener = () => {
+				logger.info('HTTPS:', this.listen.https);
+				resolve();
+			};
+			if(!retry) { this.https.on('listening', listener); }
+			this.https.listen(this.listen.https, () => {
+				resolve();
 			});
-		}).then(v => {
-			return new Promise((resolve, reject) => {
-				this.https.listen(7788, function() {
-					console.log('https listen', 7788);
-					resolve();
-				});
+		});
+	}
+	filter(req, res, next) {
+		var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress || '0.0.0.0';
+		var port = req.connection.remotePort;
+		var parseIP = ip.match(/\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b/);
+		ip = !!parseIP? parseIP[0]: ip;
+		if(!req.session.ip) { req.session.ip = ip; }
+		if(!req.session.port) { req.session.port = port; }
+		var powerby = this.config.powerby;
+
+		var processLanguage = function (acceptLanguage) {
+			var regex = /((([a-zA-Z]+(-[a-zA-Z]+)?)|\*)(;q=[0-1](\.[0-9]+)?)?)*/g;
+			var l = acceptLanguage.toLowerCase().replace(/_+/g, '-');
+			var la = l.match(regex);
+			la = la.filter(function (v) {return v;}).map(function (v) {
+				var bits = v.split(';');
+				var quality = bits[1]? parseFloat(bits[1].split("=")[1]): 1.0;
+				return {locale: bits[0], quality: quality};
+			}).sort(function (a, b) { return b.quality > a.quality; });
+			return la;
+		};
+		req.language = processLanguage(req.headers['accept-language'] || 'en-US');
+
+		res.result = new ecresult();
+		res.header('X-Powered-By', powerby);
+		res.header('Client-IP', ip);
+		res.header("Access-Control-Allow-Origin", "*");
+		res.header("Access-Control-Allow-Methods", "GET, PUT, POST, DELETE, OPTIONS");
+		res.header("Access-Control-Allow-Headers", "Hashcash, Authorization, Content-Type");
+		next();
+	}
+	// options: method, authorization, hashcash
+	register() {
+		var params = Array.prototype.slice.call(arguments);
+		var options = params.splice(0, 1)[0];
+		var method = (options.method || 'get').toLowerCase();
+		var authorization = !!options.authorization;
+		var hashcash = !!options.hashcash;
+		var registerPath = params[0];
+		var executeProcess = params[1];
+		this.router[method](registerPath, (req, res, next) => {
+			let options = {
+				params: req.params,
+				body: req.body,
+				files: req.files,
+				session: req.session,
+			};
+			executeProcess(options).then((d) => {
+				res.result.setResult(1);
+				res.result.setData(d);
+				next();
+			}).catch(e => {
+				res.result.setError(e);
+				next();
 			});
 		});
 	}
