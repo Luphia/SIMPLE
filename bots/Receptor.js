@@ -24,7 +24,7 @@ const request = require('ecrequest').request;
 const hashcashLevel = 3;
 const allowDelay = 10000 * 1000;
 
-var logger, db, checkLogin, checkHashCash, errorHandler, returnData;
+var i18n, logger, db, checkLogin, checkHashCash, errorHandler, returnData;
 checkLogin = function (req, res, next) {
 	if(req.session.uid === undefined) {
 		res.result.setErrorCode('10201');
@@ -182,6 +182,7 @@ var Bot = class extends Parent {
 		return super.init(config).then(v => {
 			logger = this.logger;
 			db = this.db;
+			i18n = this.i18n;
 
 			// listen port
 			this.listen = {http: config.main.http, https: config.main.https};
@@ -301,6 +302,7 @@ var Bot = class extends Parent {
 			return la;
 		};
 		req.language = processLanguage(req.headers['accept-language'] || 'en-US');
+		i18n.setLocale(req.language[0].locale.toLowerCase());
 
 		res.result = new ecresult();
 		res.header('X-Powered-By', powerby);

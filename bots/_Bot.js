@@ -11,6 +11,7 @@ var Bot = class {
 		}
 		this.db = config._db;
 		this.logger = config._logger;
+		this.i18n = config._i18n;
 		return Promise.resolve(this);
 	}
 	start() {

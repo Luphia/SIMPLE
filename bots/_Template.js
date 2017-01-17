@@ -6,7 +6,7 @@ const path = require('path');
 
 const Parent = require(path.join(__dirname, '_Bot.js'));
 
-var db, logger;
+var db, logger, i18n;
 
 var Bot = class extends Parent {
 	constructor() {
@@ -15,6 +15,7 @@ var Bot = class extends Parent {
 	}
 	init(config) {
 		return super.init(config).then(v => {
+			i18n = this.i18n;
 			logger = this.logger;
 			db = this.db;
 			// do something

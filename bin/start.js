@@ -5,6 +5,7 @@ const url = require('url');
 const path = require('path');
 const pem = require('pem');
 const log4js = require('log4js');
+const i18n = require("i18n");
 const dvalue = require('dvalue');
 const mongodb = require('mongodb').MongoClient;
 
@@ -84,7 +85,7 @@ var initialConfig = function (config) {
 	};
 	config.powerby = packageInfo.name + " v" + packageInfo.version;
 
-	var defaultConfigFolder = path.join('__dirname', '../config');
+	var defaultConfigFolder = path.join(__dirname, '../config');
 	var customConfigFolder = config.path.config;
 
 	return new Promise((resolve, reject) => {
@@ -135,6 +136,16 @@ var initialConfig = function (config) {
 		
 		return Promise.resolve(config);
 	});
+};
+
+var initialTranslator = function (config) {
+	var localeFolder = path.join(__dirname, '../locales');
+	i18n.configure({
+		locales: ['en', 'zh', 'zh-tw', 'zh-cn'],
+		directory: localeFolder
+	});
+	config._i18n = i18n;
+	return Promise.resolve(config);
 };
 
 var initialLogger = function (config) {
@@ -279,6 +290,7 @@ var startService = function (Bots) {
 // service start
 initialFolder(packageInfo)
 .then(initialConfig)
+.then(initialTranslator)
 .then(initialLogger)
 .then(initialDB)
 .then(initialBot)
