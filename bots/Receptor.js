@@ -209,6 +209,9 @@ var Bot = class extends Parent {
 			this.app.use(bodyParser.urlencoded({ extended: false }));
 			// json parser
 			this.app.use(bodyParser.json({}));
+			// file parser
+			this.app.use(multer({ dest: config.path.upload }).any());
+
 			this.app.use(this.router);
 			this.app.use(returnData);
 

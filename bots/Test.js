@@ -33,7 +33,7 @@ var Bot = class extends Parent {
 		super.getBot('Receptor').then(receptor => {
 			// method: get, post, put, delete, all
 			receptor.register(
-				{method: 'get', authorization: false, hashcash: false},
+				{method: 'all', authorization: false, hashcash: false},
 				'/test',
 				(options) => { return this.myaction(options); }
 			);
@@ -63,7 +63,6 @@ var Bot = class extends Parent {
 	}
 
 	myaction(options) {
-		console.log(this.name);
 		if(Math.random() > 0.3) {
 			return Promise.resolve(options);
 		}
