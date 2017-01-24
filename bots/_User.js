@@ -7,52 +7,13 @@ const crypto = require('crypto');
 const raid2x = require('raid2x');
 const dvalue = require('dvalue');
 const textype = require('textype');
-const request = require('../utils/Crawler.js').request;
+const request = require('ecrequest');
+
+const User = require(path.join(__dirname, '../Models/User'));
 
 const Parent = require(path.join(__dirname, '_Bot.js'));
 
 var db, logger, i18n, APIURL;
-
-var formatUser = function (user) {
-	var now = new Date().getTime();
-	user = dvalue.default(user, {
-		account: "",
-		password: "",
-		username: {family: "", given: "", middle: ""},
-		displayname: "",
-		gender: "",
-		email: "",
-		photo: "",
-		ctime: now,
-		ltime: 0,
-		enable: true,
-		verified: false,
-		allowmail: false,
-		status: 1
-	});
-
-	// password
-	user.password = dvalue.hashPassword(user.password);
-	user.password.mtime = now;
-	user.password.expire = -1;
-
-	// email
-	user.email = {
-		address: user.email,
-		verified: false
-	};
-
-	// display name
-	if(user.displayname.length == 0) {
-		user.displayname = user.account.split('@')[0];
-	}
-	return user;
-};
-var descUser = function (user) {
-	user.uid = user._id.toString();
-	delete user._id;
-	return user;
-};
 
 var Bot = class extends Parent {
 	constructor() {
@@ -174,41 +135,63 @@ var Bot = class extends Parent {
 		return rs;
 	}
 
-addUser(user) {
-	var USERPROFILE = formatUser(user);
-	var userdata = {type: 'email', profile: USERPROFILE};
-	cb = dvalue.default(cb, function () {});
-	if(!textype.isEmail(user.email)) {
-		var e = new Error("Invalid e-mail");
-		e.code = '12001';
-		return cb(e);
-	}
+	userRegister(user) {
+		// check user exisits -> create user -> send email (不受 email 次數限制)
+		return this.userExists(user).then(result => {
+			return new Promise((resolve, reject) => {
+				if(result) {
+					resolve(user);
+				}
+				else {
+					var error = new Error('Exists user data');
+					error.code = '29101';
+					reject(error);
+				}
+			});
+		}).then(result => {
+			return this.userCreate(user);
+		}).then(result => {
 
-	// check to merge
-	// no merge -> create user
-	var condition = {account: user.account, enable: true};
-	var subCondition = mergeCondition(userdata);
-	/*
-	q.fcall(function () { return self.mergeUser(subCondition, USERPROFILE); })
-	 .then(function (v) { if(v) { return v; } else { return self.createUser(user); }})
-	 */
-	q.fcall(function () { return self.createUser(user); })
-	 .then(function (v) {
-		 var deferred = q.defer();
-		 self.createToken(v, function (e, d) {
-			 if(e) { deferred.reject(e); }
-			 else { deferred.resolve(d); }
-		 });
-		 return deferred.promise;
-	 })
-	 .then(function (v) {
-		  cb(null, v);
-	  },
-		function (e) {
-			cb(e);
-	  })
-	 .done();
-}
+		});
+	}
+	userExists(user) {
+		var userModel = new User(user);
+		var condition = userModel.condition;
+		var collection = db.collection(User.TABLENAME);
+		return new Promise((resolve, reject) => {
+			collection.find(condition).toArray((error, data) => {
+				if(error) {
+					error.code = "01002";
+					reject(error);
+				}
+				else {
+					if(data && data.length > 0) { resolve(true); }
+					else { resolve(false); }
+				}
+			});
+		});
+	}
+	userCreate(user) {
+		var USERPROFILE = new User(user);
+		var userdata = {type: 'email', profile: USERPROFILE};
+		cb = dvalue.default(cb, function () {});
+		if(!textype.isEmail(user.email)) {
+			var e = new Error("Invalid e-mail");
+			e.code = '12001';
+			return cb(e);
+		}
+
+
+	}
+	sendVericication() {
+
+	}
+	verificationEmail() {
+
+	}
+	verificationPhone() {
+
+	}
 };
 
 module.exports = Bot;

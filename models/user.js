@@ -1,13 +1,16 @@
 const path = require('path');
+
+const mongodb = require('mongodb');
+
 const dvalue = require('dvalue');
 const textype = require('textype');
 const Parent = require(path.join(__dirname, 'Model'));
 
-var user = class extends Parent {
+var Model = class extends Parent {
 	constructor(data) {
 		var data = data || {};
 		super(data);
-		this.uid = data.uid;
+		this.uid = data.uid || data._id;
 		this.account = data.account;
 		this.password = data.password;
 		this.username = data.username;
@@ -15,6 +18,7 @@ var user = class extends Parent {
 		this.gender = data.gender;
 		this.photo = data.photo;
 		this.email = data.email;
+		this.phone = data.phone;
 		this.facebook = data.facebook;
 		this.googleplus = data.googleplus;
 		this.twitter = data.twitter;
@@ -22,6 +26,27 @@ var user = class extends Parent {
 		this.status = data.status;
 		this.ctime = data.ctime;
 		this.ltime = data.ltime;
+		super.save();
+	}
+
+	set uid(value) {
+		switch(typeof(value)) {
+			case 'string':
+				if(value.length > 0) {
+					this._uid = value;
+				}
+			break;
+
+			case 'object':
+				if(typeof(value.str) == 'string' && value.str.length > 0) {
+					this._uid = value.str;
+				}
+			break;
+		}
+		return this.uid;
+	}
+	get uid() {
+		return this._uid;
 	}
 
 	set account(value) {
@@ -156,14 +181,42 @@ var user = class extends Parent {
 		return this._email.address;
 	}
 
+	set phone(value) {
+		var phoneObject = {country: undefined, number: undefined, verify: false};
+		switch(typeof(value)) {
+			case 'string':
+				phoneObject.number = value
+			break;
+
+			case 'object':
+				phoneObject.country = value.country;
+				phoneObject.number = value.number;
+				phoneObject.verify = !!value.verify;
+			break;
+		}
+		this._phone = phoneObject;
+		return this.phone;
+	}
+	get phone() {
+		var result = "";
+		if(this._phone) {
+			if(this._phone.country) { result = result.concat(this._phone.country); }
+			if(this._phone.number) { result = result.concat(this._phone.number); }
+		}
+		else {
+			result = undefined;
+		}
+		return result;
+	}
+
 	set facebook(value) {
 		value = value || {};
 		if(typeof(value.id) == 'string' && value.id.length > 0) {
 			this._facebook = {
 				id: value.id,
 				name: value.name || "",
-				picture: dvalue.isURL(value.picture)? value.picture: "",
-				email: dvalue.isEmail(value.email)? value.email: ""
+				picture: textype.isURL(value.picture)? value.picture: "",
+				email: textype.isEmail(value.email)? value.email: ""
 			};
 		}
 		return this.facebook;
@@ -178,8 +231,8 @@ var user = class extends Parent {
 			this._googleplus = {
 				id: value.id,
 				name: value.name || "",
-				picture: dvalue.isURL(value.picture)? value.picture: "",
-				email: dvalue.isEmail(value.email)? value.email: ""
+				picture: textype.isURL(value.picture)? value.picture: "",
+				email: textype.isEmail(value.email)? value.email: ""
 			};
 		}
 		return this.googleplus;
@@ -194,8 +247,8 @@ var user = class extends Parent {
 			this._twitter = {
 				id: value.id,
 				name: value.name || "",
-				picture: dvalue.isURL(value.picture)? value.picture: "",
-				email: dvalue.isEmail(value.email)? value.email: ""
+				picture: textype.isURL(value.picture)? value.picture: "",
+				email: textype.isEmail(value.email)? value.email: ""
 			};
 		}
 		return this.twitter;
@@ -210,8 +263,8 @@ var user = class extends Parent {
 			this._linkedin = {
 				id: value.id,
 				name: value.name || "",
-				picture: dvalue.isURL(value.picture)? value.picture: "",
-				email: dvalue.isEmail(value.email)? value.email: ""
+				picture: textype.isURL(value.picture)? value.picture: "",
+				email: textype.isEmail(value.email)? value.email: ""
 			};
 		}
 		return this.linkedin;
@@ -253,6 +306,31 @@ var user = class extends Parent {
 		return this._ltime;
 	}
 
+	get condition() {
+		var result = {};
+		// uid, email, googleplus.id, facebook.id, twitter.id, linkedin.id
+		var uid, email, googleplus, facebook, twitter, linkedin;
+		if(uid = this.uid) {
+			result._id = new mongodb.ObjectID(uid);
+		}
+		else if(email) {
+			result["email.address"] = email;
+		}
+		else if(facebook = this.facebook) {
+			result["facebook.id"] = facebook.id;
+		}
+		else if(googleplus = this.googleplus) {
+			result["googleplus.id"] = googleplus.id;
+		}
+		else if(twitter = this.twitter) {
+			result["twitter.id"] = twitter.id;
+		}
+		else if(linkedin = this.linkedin) {
+			result["linkedin.id"] = linkedin.id;
+		}
+		return result;
+	}
+
 	checkPassword(password) {
 		var testObject = {
 			hash: this._password.hash,
@@ -265,22 +343,23 @@ var user = class extends Parent {
 		return this.password.expire > new Date().getTime();
 	}
 
-	import(data) {
-
-	}
 	formatDB() {
-		return super.formatDB();
+		var result = super.formatDB();
+		delete result.uid;
+		return result;
 	}
 	formatAPI() {
 		return super.formatAPI();
 	}
 }
 
-user.STATUS = {
+Model.STATUS = {
 	DISABLE: 0,
 	ENABLE: 1,
 	UNVERIFIED: -1,
 	BAN: -2
 };
 
-module.exports = user;
+Model.TABLE = "Users";
+
+module.exports = Model;
