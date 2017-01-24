@@ -313,7 +313,7 @@ var Model = class extends Parent {
 		if(uid = this.uid) {
 			result._id = new mongodb.ObjectID(uid);
 		}
-		else if(email) {
+		else if(email = this.email) {
 			result["email.address"] = email;
 		}
 		else if(facebook = this.facebook) {
