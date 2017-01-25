@@ -4,7 +4,7 @@ var Model = class {
 	constructor(data) {
 		return this;
 	}
-	formatDB() {
+	toDB() {
 		var data = {};
 		for(var k in this) {
 			if(attributeRegExp.test(k)) {
@@ -14,7 +14,7 @@ var Model = class {
 		}
 		return data;
 	}
-	formatAPI() {
+	toAPI() {
 		var data = {};
 		for(var k in this) {
 			if(attributeRegExp.test(k)) {

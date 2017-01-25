@@ -38,9 +38,8 @@ var Model = class extends Parent {
 			break;
 
 			case 'object':
-				if(typeof(value.str) == 'string' && value.str.length > 0) {
-					this._uid = value.str;
-				}
+				var _id = value.str || value.toString();
+				this._uid = _id;
 			break;
 		}
 		return this.uid;
@@ -274,10 +273,10 @@ var Model = class extends Parent {
 	}
 
 	set status(value) {
-		this._status = user.STATUS.ENABLE;
-		for(var k in user.STATUS) {
-			if(user.STATUS[k] == value) {
-				this._status = user.STATUS[k];
+		this._status = Model.STATUS.ENABLE;
+		for(var k in Model.STATUS) {
+			if(Model.STATUS[k] == value) {
+				this._status = Model.STATUS[k];
 				break;
 			}
 		}
@@ -343,13 +342,13 @@ var Model = class extends Parent {
 		return this.password.expire > new Date().getTime();
 	}
 
-	formatDB() {
-		var result = super.formatDB();
+	toDB() {
+		var result = super.toDB();
 		delete result.uid;
 		return result;
 	}
-	formatAPI() {
-		return super.formatAPI();
+	toAPI() {
+		return super.toAPI();
 	}
 }
 
@@ -360,6 +359,6 @@ Model.STATUS = {
 	BAN: -2
 };
 
-Model.TABLE = "Users";
+Model.TABLENAME = "Users";
 
 module.exports = Model;
