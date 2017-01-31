@@ -58,7 +58,6 @@ var Bot = class extends Parent {
 	}
 	ready() {
 		return super.ready().then(v => {
-			console.log('ready:', this.name);
 			return Promise.resolve(v);
 		});
 	}

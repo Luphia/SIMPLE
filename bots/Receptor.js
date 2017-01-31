@@ -232,7 +232,6 @@ var Bot = class extends Parent {
 	}
 	ready() {
 		return super.ready().then(v => {
-			console.log('ready:', this.name);
 			return Promise.resolve(v);
 		});
 	}
@@ -323,14 +322,35 @@ var Bot = class extends Parent {
 		var executeProcess = params[1];
 		this.router[method](registerPath, (req, res, next) => {
 			let options = {
+				url: req.url,
 				params: req.params,
+				query: req.query,
 				body: req.body,
 				files: req.files,
 				session: req.session,
 			};
 			executeProcess(options).then((d) => {
 				res.result.setResult(1);
-				res.result.setData(d);
+				if(typeof(d) == 'object') {
+					var data = {};
+					var session = {};
+					for(var k in d) {
+						// session data
+						if(/^_session_/.test(k)) {
+							let key = k.substr(9);
+							session[key] = d[k];
+						}
+						else {
+							data[k] = d[k];
+						}
+					}
+
+					res.result.setData(data);
+					res.result.setSession(session);
+				}
+				else {
+					res.result.setData(d);
+				}
 				next();
 			}).catch(e => {
 				res.result.setError(e);

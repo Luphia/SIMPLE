@@ -7,10 +7,11 @@ const textype = require('textype');
 const request = require('ecrequest');
 
 const User = require(path.join(__dirname, '../Models/User'));
+const Code = require(path.join(__dirname, '../Models/Code'));
 
 const Parent = require(path.join(__dirname, '_Bot.js'));
 
-var db, logger, i18n, APIURL;
+var db, logger, i18n, APIURL, historyPeriod;
 
 var Bot = class extends Parent {
 	constructor() {
@@ -26,16 +27,28 @@ var Bot = class extends Parent {
 			i18n = this.i18n;
 			logger = this.logger;
 			db = this.db;
-			APIURL = config.main.url;	
+			APIURL = config.main.url;
+			historyPeriod = config.auth.historyPeriod;
 			return Promise.resolve(v);
 		}).then(v => {
+			// user register
 			super.getBot('Receptor').then(receptor => {
 				receptor.register(
-					{method: 'post', authorization: false, hashcash: false},
+					{method: 'post', authorization: false, hashcash: true},
 					'/register',
-					(options) => { return this.apiRegister(options); }
+					(options) => { return this.apiUserRegister(options); }
 				);
 			});
+
+			// user login
+			super.getBot('Receptor').then(receptor => {
+				receptor.register(
+					{method: 'post', authorization: false, hashcash: true},
+					'/login',
+					(options) => { return this.apiUserLogin(options); }
+				);
+			});
+
 			return Promise.resolve(v);
 		});
 	}
@@ -52,9 +65,17 @@ var Bot = class extends Parent {
 		});
 	}
 
-	apiRegister(options) {
+	apiUserRegister(options) {
 		var user = options.body;
 		return this.userRegister(user);
+	}
+	apiUserLogin(options) {
+		var data = options.body || {};
+		var user = {
+			account: data.account || data.email,
+			password: data.password
+		};
+		return this.userLogin(user);
 	}
 	addVerifyHistory(uid) {
 		var now = new Date().getTime();
@@ -150,8 +171,7 @@ var Bot = class extends Parent {
 		return this.userExists(user).then(result => {
 			return new Promise((resolve, reject) => {
 				if(result) {
-					var error = new Error('Exists user data');
-					error.code = '29101';
+					var error = e = new Code(29101);
 					reject(error);
 				}
 				else {
@@ -186,8 +206,7 @@ var Bot = class extends Parent {
 		var dbRecord = userModel.toDB();
 		var collection = db.collection(User.TABLENAME);
 		if(!textype.isEmail(user.email)) {
-			var e = new Error("Invalid e-mail");
-			e.code = '12001';
+			var e = e = new Code(12001);
 			return Promise.reject(e);
 		}
 		return new Promise((resolve, reject) => {
@@ -211,6 +230,53 @@ var Bot = class extends Parent {
 	}
 	verificationPhone() {
 
+	}
+	userLogin(user) {
+		var userModel = new User(user);
+		if(!this.addLoginHistory(user.account)) {
+			var e = new Code(49101);
+			return Promise.reject(e);
+		}
+		var password = user.password;
+		var condition =  userModel.condition;
+		var collection = db.collection(User.TABLENAME);
+		return new Promise((resolve, reject) => {
+			collection.findOne(condition, {}, (e, d) => {
+				if(e) {
+					e.code = "01002";
+					reject(e);
+				}
+				else if(d) {
+					userModel.profile = d;
+					if(userModel.checkPassword(password)) {
+						this.cleanLoginHistory(user.account);
+						let result = userModel.profile;
+						result._session_uid = userModel.uid;
+						resolve(result);
+					}
+					else {
+						e = new Code(19101);
+						reject(e);
+					}
+				}
+				else {
+					e = new Code(19101);
+					reject(e);
+				}
+			});
+		});
+	}
+	userLogout(user) {
+
+	}
+	tokenCreate(user) {
+
+	}
+	tokenRenew(user) {
+
+	}
+	tokenDestroy(user) {
+		
 	}
 };
 

@@ -10,23 +10,32 @@ var Model = class extends Parent {
 	constructor(data) {
 		var data = data || {};
 		super(data);
-		this.uid = data.uid || data._id;
-		this.account = data.account;
-		this.password = data.password;
-		this.username = data.username;
-		this.displayname = data.displayname;
-		this.gender = data.gender;
-		this.photo = data.photo;
-		this.email = data.email;
-		this.phone = data.phone;
-		this.facebook = data.facebook;
-		this.googleplus = data.googleplus;
-		this.twitter = data.twitter;
-		this.linkedin = data.linkedin;
-		this.status = data.status;
-		this.ctime = data.ctime;
-		this.ltime = data.ltime;
+		this.profile = data;
 		super.save();
+	}
+
+	set profile(value) {
+		value = value || {};
+		this.uid = value.uid || value._id;
+		this.account = value.account || value.email;
+		this.password = value.password;
+		this.username = value.username;
+		this.displayname = value.displayname;
+		this.gender = value.gender;
+		this.photo = value.photo;
+		this.email = value.email;
+		this.phone = value.phone;
+		this.facebook = value.facebook;
+		this.googleplus = value.googleplus;
+		this.twitter = value.twitter;
+		this.linkedin = value.linkedin;
+		this.status = value.status;
+		this.ctime = value.ctime;
+		this.ltime = value.ltime;
+		return this;
+	}
+	get profile() {
+		return super.toAPI();
 	}
 
 	set uid(value) {
@@ -308,9 +317,12 @@ var Model = class extends Parent {
 	get condition() {
 		var result = {};
 		// uid, email, googleplus.id, facebook.id, twitter.id, linkedin.id
-		var uid, email, googleplus, facebook, twitter, linkedin;
+		var uid, account, email, googleplus, facebook, twitter, linkedin;
 		if(uid = this.uid) {
 			result._id = new mongodb.ObjectID(uid);
+		}
+		else if(account = this.account) {
+			result.account = account;
 		}
 		else if(email = this.email) {
 			result["email.address"] = email;
