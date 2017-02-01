@@ -8,7 +8,7 @@ const Parent = require(path.join(__dirname, 'Model'));
 
 var Model = class extends Parent {
 	constructor(data) {
-		var data = data || {};
+		data = data || {};
 		super(data);
 		this.profile = data;
 		super.save();
@@ -362,7 +362,7 @@ var Model = class extends Parent {
 	toAPI() {
 		return super.toAPI();
 	}
-}
+};
 
 Model.STATUS = {
 	DISABLE: 0,
