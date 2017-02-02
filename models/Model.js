@@ -1,3 +1,5 @@
+const assert = require('assert');
+
 var attributeRegExp = /^_[a-zA-Z0-9]+$/;
 
 var Model = class {
@@ -39,7 +41,7 @@ var Model = class {
 				}
 			}
 		}
-		return result;
+		return {"$set": result};
 	}
 	save() {
 		var data = {};

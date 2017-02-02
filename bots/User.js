@@ -7,17 +7,37 @@ const textype = require('textype');
 const request = require('ecrequest');
 
 const User = require(path.join(__dirname, '../Models/User'));
+const Token = require(path.join(__dirname, '../Models/Token'));
 const Code = require(path.join(__dirname, '../Models/Code'));
 
 const Parent = require(path.join(__dirname, '_Bot.js'));
 
-var db, logger, i18n, APIURL, historyPeriod;
+var db, logger, i18n, APIURL, historyPeriod, tokenLife, renewLife;
 
 var Bot = class extends Parent {
 	constructor() {
 		super();
 		this.name = path.parse(__filename).base.replace(/.js$/, '');
 	}
+	get tokenParser() {
+		var parser = (req, res, next) => {
+			if(req.headers.authorization) {
+				var token = req.headers.authorization.replace(/^Bearer /, '').trim();
+				this.tokenCheck(token).then(uid => {
+					req.session.uid = uid;
+					req.session.token = token;
+					next();
+				}).catch(e => {
+					next();
+				});
+			}
+			else {
+				next();
+			}
+		}
+		return parser;
+	}
+
 	init(config) {
 		this.mailHistory = {};
 		this.loginHistory = {};
@@ -29,23 +49,54 @@ var Bot = class extends Parent {
 			db = this.db;
 			APIURL = config.main.url;
 			historyPeriod = config.auth.historyPeriod;
+			tokenLife = config.auth.tokenLife;
+			renewLife = config.auth.renewLife;
 			return Promise.resolve(v);
 		}).then(v => {
-			// user register
 			super.getBot('Receptor').then(receptor => {
+				// token parser
+				receptor.tokenParser = this.tokenParser;
+
+				// user register
 				receptor.register(
 					{method: 'post', authorization: false, hashcash: true},
 					'/register',
 					(options) => { return this.apiUserRegister(options); }
 				);
-			});
 
-			// user login
-			super.getBot('Receptor').then(receptor => {
+				// user login
 				receptor.register(
 					{method: 'post', authorization: false, hashcash: true},
 					'/login',
 					(options) => { return this.apiUserLogin(options); }
+				);
+
+				// user logout
+				receptor.register(
+					{method: 'get', authorization: false, hashcash: false},
+					'/logout',
+					(options) => { return this.apiUserLogout(options); }
+				);
+
+				// user profile
+				receptor.register(
+					{method: 'get', authorization: true, hashcash: false},
+					'/profile',
+					(options) => { return this.apiUserProfile(options); }
+				);
+
+				// token renew
+				receptor.register(
+					{method: 'get', authorization: true, hashcash: false},
+					'/token/:token/:password',
+					(options) => { return this.apiTokenRenew(options); }
+				);
+
+				// token destroy
+				receptor.register(
+					{method: 'delete', authorization: true, hashcash: false},
+					'/token/:token',
+					(options) => { return this.apiTokenDestroy(options); }
 				);
 			});
 
@@ -77,6 +128,35 @@ var Bot = class extends Parent {
 		};
 		return this.userLogin(user);
 	}
+	apiUserLogout(options) {
+		var data = options.body || {};
+		var user = {
+			uid: options.session.uid,
+			token: options.session.token
+		};
+		return this.userLogout(user);
+	}
+	apiUserProfile(options) {
+		var data = options.body || {};
+		var user = {
+			uid: options.session.uid
+		};
+		return this.userProfile(user);
+	}
+	apiTokenRenew(options) {
+		var data = {
+			token: options.params.token,
+			password: options.params.password
+		};
+		return this.tokenRenew(data);
+	}
+	apiTokenDestroy(options) {
+		var data = {
+			token: options.params.token
+		};
+		return this.tokenDestroy(data);
+	}
+
 	addVerifyHistory(uid) {
 		var now = new Date().getTime();
 		var rs;
@@ -167,11 +247,19 @@ var Bot = class extends Parent {
 	}
 
 	userRegister(user) {
+		var uid;
+		if(!user.displayname) {
+			// 
+			if(user.email) {
+				user.displayname = user.email.split('@')[0];
+			}
+		}
+
 		// check user exisits -> create user -> send email (不受 email 次數限制)
 		return this.userExists(user).then(result => {
 			return new Promise((resolve, reject) => {
 				if(result) {
-					var error = e = new Code(29101);
+					var error = new Code(29101);
 					reject(error);
 				}
 				else {
@@ -181,7 +269,10 @@ var Bot = class extends Parent {
 		}).then(result => {
 			return this.userCreate(user);
 		}).then(result => {
+			uid = result.uid;
 			return this.sendVericication(user);
+		}).then(result => {
+			return this.userLogin(user);
 		});
 	}
 	userExists(user) {
@@ -250,9 +341,14 @@ var Bot = class extends Parent {
 					userModel.profile = d;
 					if(userModel.checkPassword(password)) {
 						this.cleanLoginHistory(user.account);
-						let result = userModel.profile;
-						result._session_uid = userModel.uid;
-						resolve(result);
+						this.tokenCreate({uid: userModel.uid}).then(token => {
+							let result = token.toAPI();
+							result._session_uid = userModel.uid;
+							result._session_token = token.token;
+							resolve(result);
+						}).catch(error => {
+							reject(error);
+						});
 					}
 					else {
 						e = new Code(19101);
@@ -267,16 +363,159 @@ var Bot = class extends Parent {
 		});
 	}
 	userLogout(user) {
-
+		user = user || {};
+		this.tokenDestroy(user);
+		return Promise.resolve({"_session_uid": null});
+	}
+	userProfile(user) {
+		var userModel, condition, collection;
+		user = user || {};
+		if(!user.uid) {
+			let e = new Code(10201);
+			return Promise.reject(e);
+		}
+		userModel = new User(user);
+		condition = userModel.condition;
+		collection = db.collection(User.TABLENAME);
+		return new Promise((resolve, reject) => {
+			collection.find(condition, {}).toArray((e, d) => {
+				if(e) {
+					e.code = '01002';
+					reject(e);
+				}
+				else if(d.length == 0) {
+					e = new Code('01002');
+					reject(e);
+				}
+				else {
+					userModel = new User(d[0]);
+					resolve(userModel.toAPI());
+				}
+			});
+		});
 	}
 	tokenCreate(user) {
-
+		user.lifetime = tokenLife;
+		user.destroytime = renewLife;
+		var token = new Token(user);
+		var data = token.toDB();
+		var collection = db.collection(Token.TABLENAME);
+		return new Promise((resolve, reject) => {
+			collection.insert(data, (e, d) => {
+				if(e) {
+					e.code = '01001';
+					reject(e);
+				}
+				else {
+					resolve(token);
+				}
+			});
+		});
 	}
-	tokenRenew(user) {
+	tokenCheck(token) {
+		var token = new Token({token: token});
+		var condition = token.condition;
+		var collection = db.collection(Token.TABLENAME);
+		return new Promise((resolve, reject) => {
+			collection.find(condition, {}).toArray((e, d) => {
+				if(e) {
+					e.code = '01002';
+					reject(e);
+				}
+				else if(d.length == 0) {
+					e = new Code(10201);
+					reject(e);
+				}
+				else {
+					resolve(d[0].uid);
+				}
+			});
+		});
+	}
+	tokenRenew(options) {
+		options = options || {};
+		if(typeof(options.password) != 'string') {
+			options.password = '';
+		}
 
+		if(Token.check(options.token)) {
+			var token = new Token(options);
+			var condition = token.condition;
+			var collection = db.collection(Token.TABLENAME);
+			return new Promise((resolve, reject) => {
+				collection.find(condition, {}).toArray((e, d) => {
+					if(e) {
+						e.code = '01002';
+						reject(e);
+					}
+					else if(d.length == 0) {
+						e = new Code(10201);
+						reject(e);
+					}
+					else {
+						resolve(d[0]);
+					}
+				});
+			}).then(data => {
+				let oldtoken = new Token(data);
+				let newToken = oldtoken.renew();
+				let updateQuery = oldtoken.updateQuery;
+				return new Promise((resolve, reject) => {
+					collection.findAndModify(condition, {}, updateQuery, (e, d) => {
+						if(e) {
+							e.code = '01003';
+							reject(e);
+						}
+						else {
+							resolve(newToken);
+						}
+					});
+				});
+			}).then(token => {
+				let data = token.toDB();
+				return new Promise((resolve, reject) => {
+					collection.insert(token, (e, d) => {
+						if(e) {
+							e.code = '01001';
+							reject(e);
+						}
+						else {
+							resolve(token.toAPI());
+						}
+					});
+				});
+			});
+		}
+		else {
+			var e = new Code(12101);
+			return Promise.reject(e);
+		}
 	}
 	tokenDestroy(user) {
-		
+		user = user || {};
+		if(user.token) {
+			var now = new Date().getTime();
+			var token = new Token(user);
+			var condition = token.condition;
+			var collection = db.collection(Token.TABLENAME);
+			token.destroy = now;
+			var updateQuery = token.updateQuery;
+			return new Promise((resolve, reject) => {
+				collection.findAndModify(condition, {}, updateQuery, {}, (e, d) => {
+					if(e) {
+						e.code = '01003';
+						reject(e);
+					}
+					else {
+						resolve(true);
+					}
+				});
+			})
+
+		}
+		else {
+			return Promise.resolve(true);
+		}
 	}
 };
 

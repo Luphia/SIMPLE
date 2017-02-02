@@ -319,7 +319,7 @@ var Model = class extends Parent {
 		// uid, email, googleplus.id, facebook.id, twitter.id, linkedin.id
 		var uid, account, email, googleplus, facebook, twitter, linkedin;
 		if(uid = this.uid) {
-			result._id = new mongodb.ObjectID(uid);
+			result._id = textype.isObjectID(uid)? new mongodb.ObjectID(uid): uid;
 		}
 		else if(account = this.account) {
 			result.account = account;

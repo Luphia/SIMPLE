@@ -178,11 +178,19 @@ var Bot = class extends Parent {
 		this.router = express.Router();
 		this.app = express();
 	}
+
+	set tokenParser(value) {
+		this._tokenParser = value;
+	}
+
 	init(config) {
 		return super.init(config).then(v => {
 			logger = this.logger;
 			db = this.db;
 			i18n = this.i18n;
+
+			// initial token parser
+			this._tokenParser = (req, res, next) => { next(); };
 
 			// listen port
 			this.listen = {http: config.main.http, https: config.main.https};
@@ -309,7 +317,9 @@ var Bot = class extends Parent {
 		res.header("Access-Control-Allow-Origin", "*");
 		res.header("Access-Control-Allow-Methods", "GET, PUT, POST, DELETE, OPTIONS");
 		res.header("Access-Control-Allow-Headers", "Hashcash, Authorization, Content-Type");
-		next();
+
+		// parse token
+		this._tokenParser(req, res, next);
 	}
 	// options: method, authorization, hashcash
 	register() {
