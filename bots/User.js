@@ -6,9 +6,9 @@ const dvalue = require('dvalue');
 const textype = require('textype');
 const request = require('ecrequest');
 
-const User = require(path.join(__dirname, '../Models/User'));
-const Token = require(path.join(__dirname, '../Models/Token'));
-const Code = require(path.join(__dirname, '../Models/Code'));
+const User = require(path.join(__dirname, '../models/User'));
+const Token = require(path.join(__dirname, '../models/Token'));
+const Code = require(path.join(__dirname, '../models/Code'));
 
 const Parent = require(path.join(__dirname, '_Bot.js'));
 
