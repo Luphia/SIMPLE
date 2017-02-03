@@ -341,7 +341,10 @@ var Bot = class extends Parent {
 			};
 			executeProcess(options).then((d) => {
 				res.result.setResult(1);
-				if(typeof(d) == 'object') {
+				if(Array.isArray(d)) {
+					res.result.setData(d);
+				}
+				else if(typeof(d) == 'object') {
 					var data = {};
 					var session = {};
 					for(var k in d) {
