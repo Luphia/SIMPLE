@@ -1,4 +1,5 @@
 const assert = require('assert');
+const dvalue = require('dvalue');
 
 var attributeRegExp = /^_[a-zA-Z0-9]+$/;
 
@@ -51,7 +52,7 @@ var Model = class {
 				data[k] = this[k];
 			}
 		}
-		this.__oldversion = data;
+		this.__oldversion = dvalue.clone(data);
 		return true;
 	}
 };
