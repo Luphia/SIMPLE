@@ -3,41 +3,156 @@ const os = require('os');
 const fs = require('fs');
 const url = require('url');
 const path = require('path');
+const pem = require('pem');
 const log4js = require('log4js');
+const i18n = require("i18n");
 const dvalue = require('dvalue');
 const mongodb = require('mongodb').MongoClient;
 
-// initial folder
-var initFolder = function (name) {
-	var homepath = path.join(process.env.HOME || process.env.USERPROFILE, name);
-	var upload = path.join(homepath, "uploads/");
-	var logs = path.join(homepath, "logs/");
-	var dataset = path.join(homepath, "dataset/");
-	var tmp = path.join(homepath, "tmp/");
-	var pathPID = path.join(homepath, "PID");
+var packageInfo = require('../package.json');
 
-	if (!fs.existsSync(homepath)) { fs.mkdirSync(homepath); }
-	if (!fs.existsSync(upload)) { fs.mkdirSync(upload); }
-	if (!fs.existsSync(logs)) { fs.mkdirSync(logs); }
-	if (!fs.existsSync(tmp)) { fs.mkdirSync(tmp); }
+var initialFolder = function (options) {
+	var folderArray = [];
+	var projectName = options.name;
+	var homePath = path.join(process.env.HOME || process.env.USERPROFILE, projectName);
+	var configPath = path.join(homePath, "config/");
+	var uploadPath = path.join(homePath, "uploads/");
+	var logPath = path.join(homePath, "logs/");
+	var datasetPath = path.join(homePath, "dataset/");
+	var tmpPath = path.join(homePath, "tmp/");
+	var pathPID = path.join(homePath, "PID");
+	var pathUUID = path.join(homePath, "UUID");
+	var UUID = dvalue.guid();
 
-	var rs = {
-		home: homepath,
-		upload: upload,
-		logs: logs,
-		dataset: dataset,
-		tmp: tmp,
-		PID: pathPID
+	var createFolder = function (folder) {
+		return new Promise((resolve, reject) => {
+			fs.exists(folder, function (rs) {
+				if(!rs) {
+					fs.mkdir(folder, function (e, d) {
+						if(e) { reject(e); }
+						else { resolve(folder); }
+					});
+				}
+				else {
+					resolve(folder);
+				}
+			});
+		});
 	};
 
-	return rs;
+	var createPID = function (v) {
+		new Promise((resolve, reject) => {
+			var PID = process.pid;
+			fs.writeFile(pathPID, PID, function(e) {
+				if(e) { reject(e); }
+				else { resolve(v); }
+			});
+		});
+	};
+	var createUUID = function (homepath) {
+		if(!fs.existsSync(pathUUID)) {
+			fs.writeFile(pathUUID, UUID, function(err) {});
+		}
+		else {
+			UUID = fs.readFileSync(pathUUID).toString();
+		}
+		return Promise.resolve();
+	};
+
+	folderArray.push(
+		{key: 'config', path: configPath},
+		{key: 'upload', path: uploadPath},
+		{key: 'log', path: logPath},
+		{key: 'dataset', path: datasetPath},
+		{key: 'tmp', path: tmpPath}
+	);
+	return folderArray.reduce((pre, curr) => {
+		return pre.then(res => {
+			res = !!res? res: { UUID: UUID, path: { home: homePath }};
+			return createFolder(curr.path).then(nextRes => {
+				res.path[curr.key] = curr.path
+				return res;
+			});
+		});
+	}, createFolder(homePath).then(createPID).then(createUUID));
 };
 
-// initial logger
-var initLogger = function (logPath) {
-	var infoPath = path.join(logPath, 'info.log');
-	var exceptionPath = path.join(logPath, 'exception.log');
-	var threatPath = path.join(logPath, 'threat.log');
+var initialConfig = function (config) {
+	// read package.json
+	config.package = {
+		name: packageInfo.name,
+		version: packageInfo.version
+	};
+	config.powerby = packageInfo.name + " v" + packageInfo.version;
+
+	var defaultConfigFolder = path.join(__dirname, '../config');
+	var customConfigFolder = config.path.config;
+
+	return new Promise((resolve, reject) => {
+		// load certification
+		var certFiles = [path.join(defaultConfigFolder, 'certification', 'cert.pem'), path.join(defaultConfigFolder, 'certification', 'key.pem')];
+		var certFilesExists;
+		try { certFilesExists = !certFiles.find(function (v) { return !(fs.lstatSync(v).size > 64); }); } catch(e) {}
+		if(certFilesExists) {
+			config.cert = {
+				cert: fs.readFileSync(certFiles[0]),
+				key: fs.readFileSync(certFiles[1])
+			};
+			resolve(config);
+		}
+		else {
+			pem.createCertificate({days: 365, selfSigned: true}, function(e, d) {
+				config.cert = {
+					cert: d.certificate,
+					key: d.serviceKey
+				};
+				resolve(config);
+			});
+		}
+	}).then(d => {
+		// read default config
+		const token = ['^default.', '.config$'];
+		const ext = '.config';
+		fs.readdirSync(defaultConfigFolder).map(function (file) {
+			if(token.find(function (v) { return !new RegExp(v).test(file) })) { return; }
+			var tag = file.substr(token[0].length - 1, file.length - token.reduce(function (prev, curr) { return prev + curr.length - 1; }, 0));
+			var defaultConfigFilePath = path.join(defaultConfigFolder, file);
+			var customConfigFilePath = path.join(customConfigFolder, tag + ext);
+
+			// read default config
+			var defaultConfigFile = fs.readFileSync(defaultConfigFilePath);
+			var defaultConfig = JSON.parse(defaultConfigFile);
+
+			// read custom config
+			var customConfig = defaultConfig;
+			if(fs.existsSync(customConfigFilePath)) {
+				customConfig = JSON.parse(fs.readFileSync(customConfigFilePath));
+			}
+			else {
+				fs.writeFile(customConfigFilePath, defaultConfigFile, e => {});
+			}
+			config[tag] = dvalue.default(customConfig, defaultConfig);
+		});
+		
+		return Promise.resolve(config);
+	});
+};
+
+var initialTranslator = function (config) {
+	var localeFolder = path.join(__dirname, '../locales');
+	i18n.configure({
+		locales: ['en', 'zh', 'zh-tw', 'zh-cn'],
+		directory: localeFolder
+	});
+	config._i18n = i18n;
+	return Promise.resolve(config);
+};
+
+var initialLogger = function (config) {
+	var logFolder = config.path.log;
+	var infoPath = path.join(logFolder, 'info.log');
+	var exceptionPath = path.join(logFolder, 'exception.log');
+	var threatPath = path.join(logFolder, 'threat.log');
 	log4js.configure({
 		"appenders": [
 			{ "type": "console" },
@@ -47,112 +162,139 @@ var initLogger = function (logPath) {
 		],
 		"replaceConsole": true
 	});
-	var logger = {
-		info: log4js.getLogger('info'),
+	config._logger = {
+		trace: function () {
+			if(config.main.debug) {
+				var currLogger = log4js.getLogger('info');
+				currLogger.trace.apply(currLogger, Array.prototype.slice.call(arguments));
+			} 
+		},
+		debug: function () {
+			if(config.main.debug) {
+				var currLogger = log4js.getLogger('info');
+				currLogger.debug.apply(currLogger, Array.prototype.slice.call(arguments));
+			}
+		},
+		info: function () {
+			var currLogger = log4js.getLogger('info');
+			currLogger.info.apply(currLogger, Array.prototype.slice.call(arguments));
+		},
+		warn: function () {
+			var currLogger = log4js.getLogger('info');
+			currLogger.warn.apply(currLogger, Array.prototype.slice.call(arguments));
+		},
+		error: function () {
+			var currLogger = log4js.getLogger('info');
+			currLogger.error.apply(currLogger, Array.prototype.slice.call(arguments));
+		},
+		fatal: function () {
+			var currLogger = log4js.getLogger('info');
+			currLogger.fatal.apply(currLogger, Array.prototype.slice.call(arguments));
+		},
 		exception: log4js.getLogger('exception'),
 		threat: log4js.getLogger('threat')
 	};
-
-	return logger;
-}
-
-// create PID file
-var initPID = function (homepath) {
-	var PID = process.pid;
-	var pathPID = path.join(homepath, 'PID');
-	fs.writeFile(pathPID, PID, function(err) {});
-	return PID;
+	return Promise.resolve(config);
 };
 
-var initUUID = function (homepath) {
-	var pathUUID = path.join(homepath, 'UUID');
-	var UUID = dvalue.guid();
-	if(!fs.existsSync(pathUUID)) {
-		fs.writeFile(pathUUID, UUID, function(err) {});
-	}
-	else {
-		UUID = fs.readFileSync(pathUUID).toString();
-	}
-	return UUID;
-};
-
-// loadConfig
-var loadConfig = function () {
-	var config = require('../config/');
-	var packageInfo = require('../package.json');
-
-	config.path = initFolder(packageInfo.name);
-	config.logger = initLogger(config.path.logs);
-	config.PID = initPID(config.path.home);
-	config.UUID = initUUID(config.path.home);
-	config.package = {
-		name: packageInfo.name,
-		version: packageInfo.version
-	};
-	config.powerby = packageInfo.name + " v" + packageInfo.version;
-	config.getBot = function (name) {
-		var rs;
-		for(var i in bots) {
-			if(bots[i].name.toLowerCase() == name.toLowerCase()) { return bots[i]; }
-		}
-	};
-	config.getTemplate = function (name) {
-		var tpath = path.join('./templates/', name);
-		if(fs.existsSync(tpath)) { return fs.readFileSync(tpath).toString(); }
-	}
-	return config;
-};
-
-// connect database
-var connectDB = function (config, cb) {
-	config = dvalue.default(config, {});
+var initialDB = function (config) {
 	options = dvalue.default(config.db, {});
-	switch (options.type) {
-		case 'mongodb':
-			var path;
-			if(options.user && options.password) {
-				var tmpURL = url.parse(options.path);
-				tmpURL.auth = dvalue.sprintf('%s:%s', options.user, options.password);
-				path = url.format(tmpURL);
-			}
-			else {
-				path = options.path;
-			}
-			mongodb.connect(path, cb);
-			break;
-		default:
-			var DB = require('tingodb')().Db;
-			db = new DB(config.path.dataset, {});
-			cb(null, db);
-	}
-};
-
-// start all bot
-var botFolder = path.join(__dirname, "../bots");
-var files = fs.readdirSync(botFolder);
-var bots = [];
-var startBot = function (config) {
-	connectDB(config, function (e, db) {
-		var sub = "js";
-		var reg = new RegExp('\.' + sub + '$');
-		for(var key in files) {
-			if(reg.test(files[key]) && files[key].indexOf("_") == -1) {
-				var Bot = require(path.join(botFolder, files[key]));
-				var bot = new Bot(config);
-				bots.push(bot);
-				bot.name = files[key].split('.' + sub)[0];
-				bot.db = db;
-			}
+	return new Promise((resolve, reject) => {
+		switch (options.type) {
+			case 'mongodb':
+				var path;
+				if(options.user && options.password) {
+					var tmpURL = url.parse(options.path);
+					tmpURL.auth = dvalue.sprintf('%s:%s', options.user, options.password);
+					path = url.format(tmpURL);
+				}
+				else {
+					path = options.path;
+				}
+				mongodb.connect(path, function (e, d) {
+					if(e) { reject(e); }
+					else {
+						config._db = d;
+						resolve(config);
+					}
+				});
+				break;
+			default:
+				var DB = require('tingodb')().Db;
+				db = new DB(config.path.dataset, {});
+				config._db = db;
+				resolve(config);
 		}
-
-		bots.map(function (b) {
-			b.start();
-		});
 	});
 };
 
-var config = loadConfig();
-startBot(config);
-process.on('uncaughtException', function (err) {
-	logger.exception.error(err);
+var initialBot = function (config) {
+	var botFolder = path.join(__dirname, "../bots");
+	var sub = "js";
+	var reg = new RegExp('\.' + sub + '$');
+	var createBot = function (botPath) {
+		var Bot = require(botPath);
+		var bot = new Bot();
+		return bot.init(config);
+	}
+
+	return new Promise((resolve, reject) => {
+		fs.readdir(botFolder, function (e, d) {
+			if(Array.isArray(d)) { resolve(d); }
+			else { reject(e); }
+		});
+	}).then(function (d) {
+		d = d.filter(function (v) {
+			return reg.test(v) && v.indexOf("_") == -1;
+		});
+		return d.reduce((pre, curr) => {
+			return pre.then(res => {
+				var botPath = path.join(botFolder, curr);
+				return createBot(botPath).then(nextRes => {
+					res.push(nextRes);
+					return res;
+				});
+			});
+		}, Promise.resolve([]));
+	});
+};
+
+var startService = function (Bots) {
+	var start = function (bot) {
+		return bot.start();
+	};
+	var ready = function (bot) {
+		return bot.ready();
+	};
+
+	return Bots.reduce((pre, curr) => {
+		return pre.then(res => {
+			return start(curr).then(nextRes => {
+				res.push(nextRes);
+				return res;
+			});
+		});
+	}, Promise.resolve([])).then((v) => {
+		return Bots.reduce((pre, curr) => {
+			return pre.then(res => {
+				return ready(curr).then(nextRes => {
+					res.push(nextRes);
+					return res;
+				});
+			});
+		}, Promise.resolve([]));
+	});
+};
+
+
+// service start
+initialFolder(packageInfo)
+.then(initialConfig)
+.then(initialTranslator)
+.then(initialLogger)
+.then(initialDB)
+.then(initialBot)
+.then(startService)
+.catch(function (e) {
+	console.error(e);
 });
