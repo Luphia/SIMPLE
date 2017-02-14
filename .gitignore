@@ -4,6 +4,8 @@ logs
 
 # Runtime data
 pids
+PID
+UUID
 *.pid
 *.seed
 
@@ -30,10 +32,6 @@ node_modules
 # Dataset
 uploads
 dataset
-
-# Config
-config/*
-!config/index.js
 
 # Private files
 private.*

@@ -1,13 +1,14 @@
 {
   "name": "SIMPLE",
-  "version": "0.1.0",
+  "version": "1.1.0",
   "description": "Simple backend framework",
-  "main": "./bin/simple.js",
+  "main": "bin/start.js",
   "bin": {
-    "SIMPLE": "./bin/index.js"
+    "SIMPLE": "bin/start.js"
   },
   "scripts": {
-    "test": "./bin/test.js"
+    "start": "node bin/start.js",
+    "test": "node bin/test.js"
   },
   "repository": {
     "type": "git",
@@ -23,26 +24,33 @@
   },
   "homepage": "https://github.com/Luphia/SIMPLE",
   "dependencies": {
-    "body-parser": "^1.14.2",
-    "borg-ring": "^0.1.1",
-    "chokidar": "^1.4.2",
-    "dvalue": "^1.0.7",
-    "ecdb": "^0.2.11",
-    "echashcash": "^1.0.1",
-    "express": "^4.13.3",
+    "body-parser": "^1.15.2",
+    "dvalue": "latest",
+    "echashcash": "latest",
+    "ecrequest": "latest",
+    "ecresult": "latest",
+    "express": "^4.14.0",
     "express-session": "^1.13.0",
     "http-proxy": "^1.13.2",
-    "kerberos": "0.0.18",
-    "log4js": "^0.6.29",
+    "i18n": "^0.8.3",
+    "kerberos": "0.0.21",
+    "log4js": "^0.6.37",
     "mime": "^1.3.4",
-    "mongodb": "^2.1.11",
+    "mongodb": "^2.1.18",
     "multer": "^1.1.0",
-    "nodemailer": "^2.0.0",
-    "nodemailer-smtp-transport": "^2.0.1",
-    "raid2x": "^0.1.23",
+    "nodemailer": "^2.4.2",
+    "nodemailer-smtp-transport": "^2.5.0",
+    "passport": "^0.3.2",
+    "passport-facebook": "^2.1.1",
+    "passport-facebook-token": "^3.3.0",
+    "passport-google-oauth20": "^1.0.0",
+    "passport-google-token": "^0.1.2",
+    "passport-twitter": "^1.0.4",
+    "passport-twitter-token": "^1.3.0",
+    "pem": "^1.9.4",
     "serve-favicon": "^2.3.0",
-    "textype": "^1.0.3",
-    "tingodb": "^0.4.2",
-    "udp2p": "^0.2.17"
+    "spdy": "^3.4.4",
+    "textype": "latest",
+    "tingodb": "^0.5.1"
   }
 }
