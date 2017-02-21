@@ -121,12 +121,7 @@ returnData = function(req, res, next) {
 			}
 			crawler.request(options, function (cRes) {
 				res.header('Content-Type', cRes.headers['content-type']);
-				cRes.on('data', function (chunk) {
-					res.write(chunk);
-				});
-				cRes.on('end', function () {
-					res.end();
-				})
+				cRes.pipe(res);
 			}).on('error', function (e) { res.end(); }).end();
 		}
 		else if(json.result >= 100) {
