@@ -325,14 +325,19 @@ var Bot = class extends Parent {
 		var hashcash = !!options.hashcash;
 		var registerPath = params[0];
 		var executeProcess = params[1];
-		this.router[method](registerPath, (req, res, next) => {
+		let args = [registerPath];
+		if(hashcash) { args.push(checkHashCash); }
+		if(authorization) { args.push(checkLogin); }
+		args.push((req, res, next) => {
 			let options = {
 				url: req.url,
 				params: req.params,
 				query: req.query,
 				body: req.body,
 				files: req.files,
+				sid: req.sessionID,
 				session: req.session,
+				lang: req.language[0].locale
 			};
 			executeProcess(options).then((d) => {
 				res.result.setResult(1);
@@ -365,6 +370,7 @@ var Bot = class extends Parent {
 				next();
 			});
 		});
+		this.router[method].apply(this.router, args);
 	}
 };
 
