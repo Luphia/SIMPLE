@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-const utils = require('../utils');
+const startServer = require('../utils/startServer');
 
 const start = async function start() {
+    console.log(1);
     // initial folders
     // const folders = await utils.initialFolders();
 
@@ -9,8 +10,11 @@ const start = async function start() {
     // const config = await utils.loadConfig({folders});
 
     // start koa
-    utils.startServer();
-
+    console.log(2);
+    await startServer();
+    console.log(3);
     // register path
 };
-start();
+start().catch((e) => {
+    console.log(e);
+});
