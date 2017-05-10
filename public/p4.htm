@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style type="text/css">
+        html {
+            background: url(./resources/shutterstock_529632613.jpg) no-repeat center center fixed; 
+            -webkit-background-size: cover;
+            -moz-background-size: cover;
+            -o-background-size: cover;
+            background-size: cover;
+        }
+        body {
+            position: relative;
+        }
+        .board {
+            border-radius: 5px;
+            border: solid 1px rgba(255, 255, 255, .8);
+            background: rgba(255, 255, 255, .5);
+            padding: 3em;
+            position: absolute;
+            margin-top: 150px;
+            margin-left: 50px;
+            width: 550px;
+            height: 700px;
+        }
+        .title {
+            font-size: 2em;
+            line-height: 2em;
+            color: rgb(51, 27, 25);
+        }
+        .card {
+            width: 400px;
+            padding: 20px 20px 100px 20px;
+            border-radius: 5px;
+            background: rgb(255, 255, 255);
+            box-shadow: 0px 0px 5px rgba(0, 0, 0, .3);
+            transition: 1s ;
+            position: absolute;
+            top: 150px;
+        }
+        .hide {
+            transform: rotate(-90deg);
+            margin-left: -500px;
+            margin-top: 40px;
+            opacity: 0;
+        }
+        .relative {
+            position: relative;
+        }
+        .name {
+            text-align: center;
+            font-size: 2em;
+            line-height: 2em;
+        }
+        .image {
+            width: 400px;
+            height: 300px;
+            border-radius: 5px;
+            -webkit-background-size: cover;
+            -moz-background-size: cover;
+            -o-background-size: cover;
+            background-size: cover;
+            border: solid 1px #aaa;
+        }
+        .image.c1 {
+            background: url(./resources/shutterstock_541021807.jpg) no-repeat; 
+        }
+        .image.c2 {
+            background: url(./resources/shutterstock_242363662.jpg) no-repeat; 
+        }
+        .image.c3 {
+            background: url(./resources/shutterstock_123424105.jpg) no-repeat; 
+        }
+        .image.c4 {
+            background: url(./resources/shutterstock_108653714.jpg) no-repeat; 
+        }
+        .image.c5 {
+            background: url(./resources/shutterstock_72503509.jpg) no-repeat; 
+        }
+        .description {
+            text-align: center;
+            font-size: 1em;
+            line-height: 3em;
+            display: inline-flex;
+            border-radius: 50px;
+            height: 80px;
+            width: 80px;
+            line-height: 80px;
+            background: rgba(202, 177, 189, .8);
+            color: #ffffff;
+            margin: 5px;
+        }
+        .more {
+            position: absolute;
+            bottom: -80px;
+            right: -20px;
+            background: rgba(202, 177, 189, .8);
+            border-top-left-radius: 1em;
+            border-bottom-left-radius: 1em;
+            line-height: 2em;
+            color: #ffffff;
+            width: 100px;
+            text-align: right;
+            padding-right: 10px;
+        }
+        .lang {
+            position: absolute;
+            top: 30%;
+            right: 10%;
+        }
+        a {
+            position: absolute;
+            top: 800px;
+            right: 10px;
+            color: #aaa;
+            font-size: 2em;
+        }
+    </style>
+</head>
+<body>
+    <img class="lang" src="./resources/shutterstock_618063254.png">
+    <div class="board"><div class="container">
+        <div class="title">本店的料理有...</div>
+        <div class="card" onclick="hide(this)"><div class="relative">
+            <div class="name">握壽司套餐</div>
+            <div class="image c5"></div>
+            <div class="description">食材特色</div>
+            <div class="description">歷史故事</div>
+            <div class="description">其他評論</div>
+            <div class="more">點餐</div>
+        </div></div>
+        <div class="card" onclick="hide(this)"><div class="relative">
+            <div class="name">炙燒牛肉</div>
+            <div class="image c4"></div>
+            <div class="description">食材特色</div>
+            <div class="description">歷史故事</div>
+            <div class="description">其他評論</div>
+            <div class="more">點餐</div>
+        </div></div>
+        <div class="card" onclick="hide(this)"><div class="relative">
+            <div class="name">近江和牛</div>
+            <div class="image c3"></div>
+            <div class="description">食材特色</div>
+            <div class="description">歷史故事</div>
+            <div class="description">其他評論</div>
+            <div class="more">點餐</div>
+        </div></div>
+        <div class="card" onclick="hide(this)"><div class="relative">
+            <div class="name">什錦炒麵</div>
+            <div class="image c2"></div>
+            <div class="description">食材特色</div>
+            <div class="description">歷史故事</div>
+            <div class="description">其他評論</div>
+            <div class="more">點餐</div>
+        </div></div>
+        <div class="card" onclick="hide(this)"><div class="relative">
+            <div class="name">炭烤花枝</div>
+            <div class="image c1"></div>
+            <div class="description">食材特色</div>
+            <div class="description">歷史故事</div>
+            <div class="description">其他評論</div>
+            <div class="more">點餐</div>
+        </div></div>
+    </div></div>
+    <a href="p5.htm">NEXT</a>
+    <script type="text/javascript">
+        let hide = function (el) {
+            el.className += ' hide';
+        };
+    </script>
+</body>
+</html>
