@@ -295,16 +295,18 @@ var Bot = class extends Parent {
 		var processLanguage = function (acceptLanguage) {
 			var regex = /((([a-zA-Z]+(-[a-zA-Z]+)?)|\*)(;q=[0-1](\.[0-9]+)?)?)*/g;
 			var l = acceptLanguage.toLowerCase().replace(/_+/g, '-');
-			var la = l.match(regex);
+			var la = l.match(regex) || [];
+			let lang;
 			la = la.filter(function (v) {return v;}).map(function (v) {
 				var bits = v.split(';');
 				var quality = bits[1]? parseFloat(bits[1].split("=")[1]): 1.0;
 				return {locale: bits[0], quality: quality};
 			}).sort(function (a, b) { return b.quality > a.quality; });
-			return la;
+			lang = la.length > 0? la[0].locale.toLowerCase(): 'en-us';
+			return lang;
 		};
 		req.language = processLanguage(req.headers['accept-language'] || 'en-US');
-		i18n.setLocale(req.language[0].locale.toLowerCase());
+		i18n.setLocale(req.language);
 
 		res.result = new ecresult();
 		res.header('X-Powered-By', powerby);
