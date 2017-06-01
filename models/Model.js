@@ -8,7 +8,7 @@ var Model = class {
 		return this;
 	}
 	toDB() {
-		var data = {};
+		var data = { ctime: new Date().getTime() };
 		for(var k in this) {
 			if(attributeRegExp.test(k)) {
 				var key = k.substr(1);
@@ -28,7 +28,7 @@ var Model = class {
 		return data;
 	}
 	get updateQuery() {
-		var result = {};
+		var result = { mtime: new Date().getTime() };
 		for(var k in this) {
 			if(attributeRegExp.test(k)) {
 				var key = k.substr(1);
