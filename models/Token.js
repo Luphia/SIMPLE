@@ -151,22 +151,24 @@ var Model = class extends Parent {
 		var result = super.toAPI();
 		return result;
 	}
-};
-Model.check = (token) => {
-	if(!token) { return false; }
-	else if(typeof(token) == 'object') {
-		token = token.token;
+
+	static check(token) {
+		if(!token) { return false; }
+		else if(typeof(token) == 'object') {
+			token = token.token;
+		}
+		var tbody = token.substr(0, 24);
+		var tcrc = token.substr(24);
+		return dvalue.CRC32(tbody) == tcrc;
 	}
-	var tbody = token.substr(0, 24);
-	var tcrc = token.substr(24);
-	return dvalue.CRC32(tbody) == tcrc;
+	static generate() {
+		var tbody = dvalue.randomID(24);
+		var tcrc = dvalue.CRC32(tbody);
+		var token = tbody + tcrc;
+		return token;
+	}
 };
-Model.generate = () => {
-	var tbody = dvalue.randomID(24);
-	var tcrc = dvalue.CRC32(tbody);
-	var token = tbody + tcrc;
-	return token;
-};
+
 Model.TABLENAME = "Tokens";
 Model.DEFAULTLIFETIME = 86400000;
 Model.DEFAULTDESTROYTIME = 2592000000;
