@@ -33,7 +33,7 @@ var Bot = class extends Parent {
 		});
 	}
 
-	send(email, subject, content) {
+	send({email, subject, content}) {
 		var mailTransport = nodemailer.createTransport(smtpTransport(this.config.mail));
 		var mailOptions = {
 			from: this.config.mail.auth.user,

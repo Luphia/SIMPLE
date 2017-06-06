@@ -38,12 +38,13 @@ var Bot = class extends Parent {
 		return parser;
 	}
 
-	init(config) {
+	init(options) {
 		this.mailHistory = {};
 		this.loginHistory = {};
 		this.verifyHistory = {};
 		this.resetHistory = {};
-		return super.init(config).then(v => {
+		return super.init(options).then(v => {
+			let config = options.config;
 			i18n = this.i18n;
 			logger = this.logger;
 			db = this.db;
@@ -116,48 +117,45 @@ var Bot = class extends Parent {
 		});
 	}
 
-	apiUserRegister(options) {
-		var user = options.body;
+	apiUserRegister({url, params, query, body, files, sid, session, lang}) {
+		var user = body;
 		return this.userRegister(user);
 	}
-	apiUserLogin(options) {
-		var data = options.body || {};
+	apiUserLogin({url, params, query, body, files, sid, session, lang}) {
 		var user = {
-			account: data.account || data.email,
-			password: data.password
+			account: body.account || body.email,
+			password: body.password
 		};
 		return this.userLogin(user);
 	}
-	apiUserLogout(options) {
-		var data = options.body || {};
+	apiUserLogout({url, params, query, body, files, sid, session, lang}) {
 		var user = {
-			uid: options.session.uid,
-			token: options.session.token
+			uid: session.uid,
+			token: session.token
 		};
 		return this.userLogout(user);
 	}
-	apiUserProfile(options) {
-		var data = options.body || {};
+	apiUserProfile({url, params, query, body, files, sid, session, lang}) {
 		var user = {
-			uid: options.session.uid
+			uid: session.uid
 		};
 		return this.userProfile(user);
 	}
-	apiTokenRenew(options) {
+	apiTokenRenew({url, params, query, body, files, sid, session, lang}) {
 		var data = {
-			token: options.params.token,
-			password: options.params.password
+			token: params.token,
+			password: params.password
 		};
 		return this.tokenRenew(data);
 	}
-	apiTokenDestroy(options) {
+	apiTokenDestroy({url, params, query, body, files, sid, session, lang}) {
 		var data = {
-			token: options.params.token
+			token: params.token
 		};
 		return this.tokenDestroy(data);
 	}
 
-	addVerifyHistory(uid) {
+	addVerifyHistory({uid}) {
 		var now = new Date().getTime();
 		var rs;
 		this.verifyHistory[uid] = dvalue.default(this.verifyHistory[uid], []);
@@ -175,10 +173,10 @@ var Bot = class extends Parent {
 		if(rs) { this.verifyHistory[uid].push(now); }
 		return rs;
 	}
-	cleanVerifyHistory(uid) {
+	cleanVerifyHistory({uid}) {
 		return this.verifyHistory[uid] = [];
 	}
-	addResetHistory(uid) {
+	addResetHistory({uid}) {
 		var self = this;
 		var now = new Date().getTime();
 		var rs;
@@ -197,16 +195,16 @@ var Bot = class extends Parent {
 		if(rs) { this.resetHistory[uid].push(now); }
 		return rs;
 	}
-	cancelResetHistory(uid) {
+	cancelResetHistory({uid}) {
 		if(Array.isArray(this.resetHistory[uid])) {
 			this.resetHistory[uid].pop();
 		}
 		return true;
 	}
-	cleanResetHistory(uid) {
+	cleanResetHistory({uid}) {
 		return this.resetHistory[uid] = [];
 	}
-	addLoginHistory(uid) {
+	addLoginHistory({uid}) {
 		var now = new Date().getTime();
 		var rs;
 		this.loginHistory[uid] = dvalue.default(this.loginHistory[uid], []);
@@ -322,9 +320,9 @@ var Bot = class extends Parent {
 	verificationPhone() {
 
 	}
-	userLogin(user) {
-		var userModel = new User(user);
-		if(!this.addLoginHistory(user.account)) {
+	userLogin({account, password}) {
+		var userModel = new User({account, password});
+		if(!this.addLoginHistory({uid: account})) {
 			var e = new Code(49101);
 			return Promise.reject(e);
 		}

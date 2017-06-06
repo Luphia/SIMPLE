@@ -178,8 +178,9 @@ var Bot = class extends Parent {
 		this._tokenParser = value;
 	}
 
-	init(config) {
-		return super.init(config).then(v => {
+	init(options) {
+		return super.init(options).then(v => {
+			let config = options.config;
 			logger = this.logger;
 			db = this.db;
 			i18n = this.i18n;
