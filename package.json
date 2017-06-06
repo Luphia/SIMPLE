@@ -4,7 +4,7 @@
   "description": "Simple backend framework",
   "main": "bin/start.js",
   "bin": {
-    "SIMPLE": "bin/start.js"
+    "simple": "bin/start.js"
   },
   "scripts": {
     "start": "node bin/start.js",
