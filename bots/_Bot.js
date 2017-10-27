@@ -4,14 +4,11 @@ var Bot = class {
 	constructor() {
 		Bots.push(this);
 	}
-	init(config) {
-		this.config = {};
-		for(var k in config) {
-			if(!/^_/.test(k)) { this.config[k] = config[k]; }
-		}
-		this.db = config._db;
-		this.logger = config._logger;
-		this.i18n = config._i18n;
+	init({config, db, logger, i18n}) {
+		this.config = config;
+		this.db = db;
+		this.logger = logger;
+		this.i18n = i18n;
 		return Promise.resolve(this);
 	}
 	start() {
