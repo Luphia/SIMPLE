@@ -178,11 +178,25 @@ var Bot = class extends Parent {
 		this._tokenParser = value;
 	}
 
-	init(config) {
-		return super.init(config).then(v => {
+	init(options) {
+		return super.init(options).then(v => {
+			let config = options.config;
 			logger = this.logger;
 			db = this.db;
 			i18n = this.i18n;
+			let publicPath;
+			let projectPathStat;
+			let projectPublicStat;
+			let projectPath = config.path.project || __dirname;
+			let projectPublic = config.path.project? path.join(config.path.project, '/public') : path.join(__dirname, '../public');
+			try { projectPathStat = fs.lstatSync(projectPath); } catch(e) {}
+			try { projectPublicStat = fs.lstatSync(projectPublic); } catch(e) {}
+
+			if(projectPublicStat && projectPublicStat.isDirectory()) {
+				publicPath = projectPublic;
+			} else {
+				publicPath = projectPath;
+			}
 
 			// initial token parser
 			this._tokenParser = (req, res, next) => { next(); };
@@ -207,7 +221,8 @@ var Bot = class extends Parent {
 			// preprocess
 			this.app.use((req, res, next) => { this.filter(req, res, next); });
 			// static file
-			this.app.use(express.static(path.join(__dirname, '../public')));
+
+			this.app.use(express.static(publicPath));
 			this.app.use('/resources/', express.static(path.join(__dirname, '../resources')));
 			// form-data parser
 			this.app.use(bodyParser.urlencoded({ extended: false }));

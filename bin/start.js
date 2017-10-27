@@ -9,7 +9,7 @@ const i18n = require("i18n");
 const dvalue = require('dvalue');
 const mongodb = require('mongodb').MongoClient;
 
-var packageInfo = require('../package.json');
+const packageInfo = require('../package.json');
 
 var initialFolder = function (options) {
 	var folderArray = [];
@@ -19,12 +19,14 @@ var initialFolder = function (options) {
 	var uploadPath = path.join(homePath, "uploads/");
 	var logPath = path.join(homePath, "logs/");
 	var datasetPath = path.join(homePath, "dataset/");
+	var projectPath = process.argv[2];
 	var tmpPath = path.join(homePath, "tmp/");
 	var pathPID = path.join(homePath, "PID");
 	var pathUUID = path.join(homePath, "UUID");
 	var UUID = dvalue.guid();
 
 	var createFolder = function (folder) {
+		if(!folder) { return Promise.resolve(true); }
 		return new Promise((resolve, reject) => {
 			fs.exists(folder, function (rs) {
 				if(!rs) {
@@ -60,6 +62,7 @@ var initialFolder = function (options) {
 	};
 
 	folderArray.push(
+		{key: 'project', path: projectPath},
 		{key: 'config', path: configPath},
 		{key: 'upload', path: uploadPath},
 		{key: 'log', path: logPath},
@@ -144,11 +147,11 @@ var initialTranslator = function (config) {
 		locales: ['en', 'zh', 'zh-tw', 'zh-cn'],
 		directory: localeFolder
 	});
-	config._i18n = i18n;
-	return Promise.resolve(config);
+	return Promise.resolve(i18n);
 };
 
 var initialLogger = function (config) {
+	let logger;
 	var logFolder = config.path.log;
 	var infoPath = path.join(logFolder, 'info.log');
 	var exceptionPath = path.join(logFolder, 'exception.log');
@@ -162,7 +165,7 @@ var initialLogger = function (config) {
 		],
 		"replaceConsole": true
 	});
-	config._logger = {
+	logger = {
 		trace: function () {
 			if(config.main.debug) {
 				var currLogger = log4js.getLogger('info');
@@ -194,7 +197,7 @@ var initialLogger = function (config) {
 		exception: log4js.getLogger('exception'),
 		threat: log4js.getLogger('threat')
 	};
-	return Promise.resolve(config);
+	return Promise.resolve(logger);
 };
 
 var initialDB = function (config) {
@@ -214,28 +217,26 @@ var initialDB = function (config) {
 				mongodb.connect(path, function (e, d) {
 					if(e) { reject(e); }
 					else {
-						config._db = d;
-						resolve(config);
+						resolve(d);
 					}
 				});
 				break;
 			default:
 				var DB = require('tingodb')().Db;
 				db = new DB(config.path.dataset, {});
-				config._db = db;
-				resolve(config);
+				resolve(db);
 		}
 	});
 };
 
-var initialBot = function (config) {
+var initialBot = function ({config, logger, db, i18n}) {
 	var botFolder = path.join(__dirname, "../bots");
 	var sub = "js";
 	var reg = new RegExp('\.' + sub + '$');
 	var createBot = function (botPath) {
 		var Bot = require(botPath);
 		var bot = new Bot();
-		return bot.init(config);
+		return bot.init({config, logger, db, i18n});
 	}
 
 	return new Promise((resolve, reject) => {
@@ -290,9 +291,15 @@ var startService = function (Bots) {
 // service start
 initialFolder(packageInfo)
 .then(initialConfig)
-.then(initialTranslator)
-.then(initialLogger)
-.then(initialDB)
+.then(config => {
+	return Promise.all([
+		initialTranslator(config),
+		initialLogger(config),
+		initialDB(config)
+	]).then(rs => {
+		return Promise.resolve({ config, i18n: rs[0], logger: rs[1], db: rs[2] });
+	});
+})
 .then(initialBot)
 .then(startService)
 .catch(function (e) {
