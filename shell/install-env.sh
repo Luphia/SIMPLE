@@ -32,4 +32,4 @@ sudo ln -s /opt/nodejs/node-$NODE_VERSION-linux-x64/lib/node_modules/pm2/bin/pm2
 
 ### Install SIMPLE
 sudo npm install -g simple-backend
-sudo ln -s /opt/nodejs/node-$NODE_VERSION-linux-x64/lib/node_modules/simple-backend/bin/simple.js /usr/local/bin/
+sudo ln -s /opt/nodejs/node-$NODE_VERSION-linux-x64/lib/node_modules/simple-backend/bin/simple.js /usr/local/bin/simple
