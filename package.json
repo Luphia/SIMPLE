@@ -1,11 +1,11 @@
 {
   "name": "simple-backend",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "Simple backend framework",
   "main": "bin/start.js",
   "bin": {
-    "simple": "bin/start.js",
-    "simple-backend": "bin/start.js"
+    "simple": "bin/simple.js",
+    "simple-backend": "bin/simple.js"
   },
   "scripts": {
     "start": "node bin/start.js",
