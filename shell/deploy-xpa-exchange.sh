@@ -1,5 +1,6 @@
 #!/bin/bash
-sudo npm install -g truffle
+TRUFFLE_PATH = $(sudo npm install -g truffle)
+echo $TRUFFLE_PATH
 cd ~
 wget https://cc-wei.com/release/baliv-offchain.tar
 tar xvf baliv-offchain.tar
