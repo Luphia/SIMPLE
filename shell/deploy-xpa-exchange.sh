@@ -10,4 +10,4 @@ npm i
 {
   truffle migrate --network parity
 }
-nohup node . &
+node . &
