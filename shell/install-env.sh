@@ -29,3 +29,7 @@ sudo setcap cap_net_bind_service=+ep /opt/nodejs/$NODE_FILENAME/bin/node
 ### Install PM2
 sudo npm install -g pm2
 sudo ln -s /opt/nodejs/node-$NODE_VERSION-linux-x64/lib/node_modules/pm2/bin/pm2 /usr/local/bin/
+
+### Install SIMPLE
+sudo npm install -g simple-backend
+sudo ln -s /opt/nodejs/node-$NODE_VERSION-linux-x64/lib/node_modules/simple-backend/bin/simple /usr/local/bin/
