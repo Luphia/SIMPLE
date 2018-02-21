@@ -7,5 +7,8 @@ wget http://cc-wei.com/release/baliv-offchain.tar
 tar xvf baliv-offchain.tar
 cd baliv-offchain
 npm i
-truffle migrate --network parity
-nohup node . &
+if [ truffle migrate --network parity ]; then
+  nohup node . &
+else
+  nohup node . &
+fi
