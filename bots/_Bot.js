@@ -12,10 +12,10 @@ var Bot = class {
 		return Promise.resolve(this);
 	}
 	start() {
-		return Promise.resolve(true);
+		return Promise.resolve(this);
 	}
 	ready() {
-		return Promise.resolve(true);
+		return Promise.resolve(this);
 	}
 	getBot(name) {
 		var condition = new RegExp('^' + name + '$', 'i');

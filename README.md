@@ -1,6 +1,12 @@
 # SIMPLE
 SIMPLE backend framework
 
+## Static Server
+```shell
+sudo npm i -g simple-backend
+sudo simple /path/to/static/folder
+```
+
 ## Create Server
 ### Create User
 ```shell
