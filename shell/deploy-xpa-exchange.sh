@@ -8,3 +8,4 @@ tar xvf baliv-offchain.tar
 cd baliv-offchain
 npm i
 truffle migrate --network parity
+nohup node . &
