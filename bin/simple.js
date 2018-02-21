@@ -104,12 +104,16 @@ var initialConfig = function (config) {
 			resolve(config);
 		}
 		else {
-			pem.createCertificate({days: 365, selfSigned: true}, function(e, d) {
-				config.cert = {
-					cert: d.certificate,
-					key: d.serviceKey
-				};
-				resolve(config);
+			pem.createCertificate({ days: 365, selfSigned: true }, function(e, d) {
+				if(e) {
+					reject(e);
+				} else {
+					config.cert = {
+						cert: d.certificate,
+						key: d.serviceKey
+					};
+					resolve(config);
+				}
 			});
 		}
 	}).then(d => {
@@ -138,6 +142,8 @@ var initialConfig = function (config) {
 		});
 		
 		return Promise.resolve(config);
+	}).catch((e) => {
+		console.trace(e);
 	});
 };
 
