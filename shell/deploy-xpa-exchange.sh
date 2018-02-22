@@ -7,7 +7,8 @@ PW=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
 PUBLIC_KEY=$((geth --datadir ~/geth-xpaexchange/ account new << !
 $PW
 $PW
-!) | grep Address | cut -d '{' -f 2 | cut -d '}' -f 1 )
+!
+) | grep Address | cut -d '{' -f 2 | cut -d '}' -f 1 )
 echo $PW > .pw
 echo '
 {
