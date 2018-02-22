@@ -13,8 +13,8 @@ echo $PW > .pw
 echo $PUBLIC_KEY
 echo '
 {
-"alloc" : { "$PUBLIC_KEY": { "balance": "0x33b2e3c9fd0804000000000" } },
-"coinbase" : "0x$PUBLIC_KEY",
+"alloc" : { "'"$PUBLIC_KEY"'": { "balance": "0x33b2e3c9fd0804000000000" } },
+"coinbase" : "0x'"$PUBLIC_KEY"'",
 "difficulty" : "0x2000",
 "extraData" : "",
 "gasLimit" : "0x5d8b80",
