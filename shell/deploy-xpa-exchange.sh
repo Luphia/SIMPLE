@@ -10,6 +10,7 @@ $PW
 EOF
 ) | grep Address | cut -d '{' -f 2 | cut -d '}' -f 1 )
 echo $PW > .pw
+echo $PUBLIC_KEY
 echo '
 {
 "alloc" : { "$PUBLIC_KEY": { "balance": "0x33b2e3c9fd0804000000000" } },
