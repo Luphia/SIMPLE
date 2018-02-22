@@ -106,6 +106,7 @@ sudo rm baliv-offchain.tar
 sudo chown -R $IAM /etc/baliv-offchain
 cd baliv-offchain
 sed -i "s%{IP}%$IP%g" ./config/default.main.config
+sed -i "s%{PUBLIC_KEY}%$PUBLIC_KEY%g" ./truffle.js
 sed -i "s%{PUBLIC_KEY}%$PUBLIC_KEY%g" ./migrations/2_deploy_contracts.js
 sed -i "s%{PW}%$PW%g" ./migrations/2_deploy_contracts.js
 npm i
@@ -118,5 +119,5 @@ echo "
 $CONTRACT_LIST
 RPC server: http://$IP:8745
 myEtherWallet: http://$IP/etherwallet
-XPA Exchange: http://$IP/xpaexchange
+XPA Exchange: http://$IP
 "
