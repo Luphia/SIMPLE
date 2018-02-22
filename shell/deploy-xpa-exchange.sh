@@ -103,6 +103,7 @@ cd /etc
 sudo wget http://cc-wei.com/release/baliv-offchain.tar
 sudo tar xvf baliv-offchain.tar
 sudo rm baliv-offchain.tar
+sudo chown -R $IAM ~/
 sudo chown -R $IAM /etc/baliv-offchain
 cd baliv-offchain
 sed -i "s%{IP}%$IP%g" ./config/default.main.config
