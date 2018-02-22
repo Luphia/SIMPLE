@@ -11,9 +11,9 @@ sudo swapon /swapfile
 sudo apt-get update
 sudo apt-get install openssl libtool autoconf automake uuid-dev build-essential gcc g++ python-software-properties unzip make git libcap2-bin -y
 
-sudo add-apt-repository ppa:longsleep/golang-backports
-sudo apt-get update
-sudo apt-get install golang-go
+sudo add-apt-repository ppa:longsleep/golang-backports -y
+sudo apt-get update -y
+sudo apt-get install golang-go -y
 
 NODE_FULLFILENAME=$(curl https://nodejs.org/dist/latest/SHASUMS256.txt | grep linux-x86.tar.gz | cut -d ' ' -f 3)
 NODE_VERSION=$(echo $NODE_FULLFILENAME | cut -d '-' -f 2)
@@ -102,10 +102,12 @@ rm pingpong.js
 cd /etc
 sudo wget http://cc-wei.com/release/baliv-offchain.tar
 sudo tar xvf baliv-offchain.tar
-rm baliv-offchain.tar
+sudo rm baliv-offchain.tar
 sudo chown -R $IAM /etc/baliv-offchain
 cd baliv-offchain
 sed -i "s%{IP}%$IP%g" ./config/default.main.config
+sed -i "s%{PUBLIC_KEY}%$PUBLIC_KEY%g" ./migrations/2_deploy_contracts.js
+sed -i "s%{PW}%$PW%g" ./migrations/2_deploy_contracts.js
 npm i
 {
   CONTRACT_LIST=$(truffle migrate --network parity)
