@@ -23,34 +23,13 @@ var Bot = class extends Parent {
 		});
 	}
 	start() {
-		logger.trace('Yo');
-		logger.debug('Yo');
-		logger.info('Yo');
-		logger.warn('Yo');
-		logger.error('Yo');
-		logger.fatal('Yo');
-
 		// assign api
 		super.getBot('Receptor').then(receptor => {
 			// method: get, post, put, delete, all
 			receptor.register(
 				{method: 'all', authorization: false, hashcash: false},
-				'/test',
-				(options) => { return this.myaction(options); }
-			);
-
-			// with params
-			receptor.register(
-				{method: 'get', authorization: false, hashcash: false},
-				'/test/:x',
-				(options) => { return this.myaction(options); }
-			);
-
-			// multi-path
-			receptor.register(
-				{method: 'get', authorization: false, hashcash: false},
-				['/test/:x/:y', '/test/:x/:y/:z'],
-				(options) => { return this.myaction(options); }
+				'/ping',
+				(options) => { return this.ping(options); }
 			);
 		});
 
@@ -62,16 +41,8 @@ var Bot = class extends Parent {
 		});
 	}
 
-	myaction(options) {
-		if(Math.random() > 0.3) {
-			return Promise.resolve(options);
-		}
-		else {
-			var e = new Error('something wrong');
-			e.code = '01010101';
-			return Promise.reject(e);
-		}
-		
+	ping(options) {
+		return Promise.resolve(options);
 	}
 };
 
