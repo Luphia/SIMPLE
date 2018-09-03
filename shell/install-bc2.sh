@@ -27,5 +27,5 @@ sudo ln -s $PARENT_LOCATION/$NODE_FILENAME/bin/npm /usr/local/bin
 sudo setcap cap_net_bind_service=+ep /opt/nodejs/$NODE_FILENAME/bin/node
 
 ### Install SIMPLE
-sudo npm install -g bc2
+sudo npm install -g bc2 --unsafe-perm
 sudo ln -s /opt/nodejs/node-$NODE_VERSION-linux-x64/lib/node_modules/bc2/bin/start.js /usr/local/bin/bc2
