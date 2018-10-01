@@ -27,5 +27,5 @@ sudo ln -s $PARENT_LOCATION/$NODE_FILENAME/bin/npm /usr/local/bin
 sudo setcap cap_net_bind_service=+ep /opt/nodejs/$NODE_FILENAME/bin/node
 
 ### install truffle ###
-sudo npm install -g truffle
+sudo npm install -g truffle --unsafe-perm
 sudo ln -s /opt/nodejs/node-$NODE_VERSION-linux-x64/bin/truffle /usr/local/bin/
