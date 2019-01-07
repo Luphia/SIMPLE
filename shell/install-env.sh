@@ -24,4 +24,4 @@ sudo ln -s $PARENT_LOCATION/$NODE_FILENAME/bin/node /usr/local/bin
 sudo ln -s $PARENT_LOCATION/$NODE_FILENAME/bin/npm /usr/local/bin
 
 ### assign 80 & 443 port ###
-sudo setcap 'cap_net_bind_service=+ep' `which node`
+sudo setcap 'cap_net_bind_service=+ep' $PARENT_LOCATION/$NODE_FILENAME/bin/node
