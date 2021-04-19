@@ -2,7 +2,7 @@
 
 #NODE_FULLFILENAME=$(curl https://nodejs.org/dist/latest/SHASUMS256.txt | grep linux-x64.tar.gz | cut -d ' ' -f 3)
 #NODE_VERSION=$(echo $NODE_FULLFILENAME | cut -d '-' -f 2)
-NODE_VERSION="v.11.9.0"
+NODE_VERSION="v11.9.0"
 NODE_FILENAME="node-$NODE_VERSION-linux-x64"
 PARENT_LOCATION="/opt/nodejs"
 
