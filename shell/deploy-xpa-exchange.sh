@@ -26,7 +26,7 @@ PARENT_LOCATION="/opt/nodejs"
 
 ### Download NodeJS ###
 cd /usr/local/src
-sudo wget -nc http://nodejs.org/dist/$NODE_VERSION/$NODE_FILENAME.tar.gz
+sudo wget -nc https://nodejs.org/dist/$NODE_VERSION/$NODE_FILENAME.tar.gz
 #wget -E -H -k -K -p http:///
 sudo tar zxvf $NODE_FILENAME.tar.gz
 sudo mkdir -p $PARENT_LOCATION
